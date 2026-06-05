@@ -18,21 +18,26 @@ export default function ProjectsPage() {
 
   return (
     <div>
-      <h1 className="mb-6 font-mono text-2xl font-bold text-white">
-        <span className="text-blue-400">//</span> Active Projects
-      </h1>
+      <div className="mb-8">
+        <p className="hud-label mb-2">System Directory</p>
+        <h1 className="glow-text text-3xl font-bold tracking-tight">Active Projects</h1>
+      </div>
 
       {loading && (
-        <div className="flex min-h-48 items-center justify-center">
-          <p className="animate-pulse font-mono text-sm text-blue-400">
-            Scanning systems...
+        <div className="flex min-h-48 flex-col items-center justify-center gap-3">
+          <div className="arc-reactor scale-50 opacity-80" aria-hidden>
+            <div className="arc-core" />
+          </div>
+          <p className="animate-pulse font-mono text-xs tracking-[0.3em] text-cyan-400/80 uppercase">
+            Scanning systems…
           </p>
         </div>
       )}
 
       {error && (
-        <div className="rounded-lg bg-red-900/20 p-4 font-mono text-sm text-red-400">
-          Relay offline: {error}
+        <div className="glass border-red-500/30 p-4 font-mono text-sm text-red-400">
+          <span className="hud-label text-red-400/80">Relay offline</span>
+          <p className="mt-1">{error}</p>
         </div>
       )}
 

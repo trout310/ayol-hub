@@ -4,7 +4,7 @@ import Link from 'next/link'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
-const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono' })
+const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains' })
 
 export const metadata: Metadata = {
   title: 'AYOL Hub',
@@ -15,21 +15,29 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className="dark">
       <body
-        className={`${inter.variable} ${mono.variable} font-sans bg-slate-950 text-slate-100 min-h-screen antialiased`}
+        className={`${inter.variable} ${mono.variable} font-sans text-slate-100 min-h-screen antialiased`}
       >
-        <nav className="sticky top-0 z-50 border-b border-blue-500/20 bg-slate-950/80 backdrop-blur-md">
-          <div className="mx-auto max-w-7xl px-4 h-14 flex items-center justify-between">
+        <div className="hud-backdrop" aria-hidden />
+        <div className="hud-grid" aria-hidden />
+
+        <nav className="sticky top-0 z-50 border-b border-cyan-400/15 bg-[#050810]/70 backdrop-blur-xl">
+          <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
             <Link
               href="/"
-              className="flex items-center gap-2 font-mono font-bold text-blue-400 tracking-wider hover:text-blue-300 transition-colors"
+              className="group flex items-center gap-2.5 font-mono font-bold tracking-wider transition-colors"
             >
-              <span className="text-lg">⚡</span>
-              <span className="text-sm">AYOL HUB</span>
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400/60" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.9)]" />
+              </span>
+              <span className="text-sm text-sky-300 transition-colors group-hover:text-cyan-200">
+                AYOL HUB
+              </span>
             </Link>
-            <div className="flex items-center gap-6 text-sm">
+            <div className="flex items-center gap-7 text-sm">
               <Link
                 href="/projects"
-                className="text-slate-400 hover:text-white transition-colors"
+                className="text-slate-400 transition-colors hover:text-cyan-200"
               >
                 Projects
               </Link>
@@ -37,14 +45,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 href="https://books.ayol.net"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-slate-400 hover:text-white transition-colors"
+                className="text-slate-400 transition-colors hover:text-cyan-200"
               >
                 Finance
               </a>
             </div>
           </div>
         </nav>
-        <main className="mx-auto max-w-7xl px-4 py-8">{children}</main>
+        <main className="mx-auto max-w-7xl px-4 py-10">{children}</main>
       </body>
     </html>
   )

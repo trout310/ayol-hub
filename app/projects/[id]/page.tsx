@@ -12,20 +12,23 @@ export default async function ProjectPage({ params }: Props) {
 
   if (!project) {
     return (
-      <div className="rounded-lg bg-red-900/20 p-4 text-red-400">
-        Project not found: {id}
-      </div>
+      <div className="glass border-red-500/30 p-4 text-red-400">Project not found: {id}</div>
     )
   }
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] flex-col">
+    <div className="flex h-[calc(100vh-8rem)] flex-col">
       <div className="mb-4 flex items-center gap-3">
-        <Link href="/projects" className="text-sm text-slate-400 hover:text-white transition-colors">
+        <Link
+          href="/projects"
+          className="font-mono text-xs uppercase tracking-wider text-slate-400 transition-colors hover:text-cyan-200"
+        >
           ← Projects
         </Link>
-        <span className="text-slate-700">/</span>
-        <span className="text-2xl">{project.emoji}</span>
+        <span className="text-cyan-500/40">/</span>
+        <span className="text-2xl drop-shadow-[0_0_8px_rgba(34,211,238,0.25)]">
+          {project.emoji}
+        </span>
         <h1 className="text-xl font-semibold text-white">{project.name}</h1>
       </div>
       <ChatInterface projectId={id} />

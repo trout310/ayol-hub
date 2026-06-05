@@ -38,10 +38,10 @@ export default function VoiceButton({ onTranscript }: Props) {
       type="button"
       onClick={startListening}
       disabled={listening}
-      className={`rounded-lg px-3 py-2 text-sm transition-all ${
+      className={`rounded-lg border px-3 py-2 text-sm transition-all ${
         listening
-          ? 'animate-pulse bg-red-600 text-white'
-          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+          ? 'animate-pulse border-red-500/50 bg-red-600/80 text-white shadow-[0_0_16px_-4px_rgba(239,68,68,0.8)]'
+          : 'border-cyan-400/20 bg-slate-900/70 text-slate-300 hover:border-cyan-400/50 hover:text-cyan-200'
       }`}
       title={listening ? 'Listening…' : 'Voice input'}
     >

@@ -3,39 +3,49 @@ import Link from 'next/link'
 export default function HomePage() {
   return (
     <div className="flex min-h-[80vh] flex-col items-center justify-center text-center">
-      <p className="mb-4 font-mono text-xs tracking-[0.35em] text-blue-400 uppercase">
+      {/* Arc-reactor halo behind the title */}
+      <div className="fade-up relative mb-10 flex items-center justify-center">
+        <div className="absolute h-56 w-56 rounded-full bg-cyan-500/10 blur-3xl" aria-hidden />
+        <div className="arc-reactor opacity-90" aria-hidden>
+          <div className="arc-core" />
+        </div>
+        <div className="absolute flex flex-col items-center">
+          <p className="hud-label mb-2">Online</p>
+          <span className="font-mono text-xs tracking-[0.3em] text-cyan-300/80">J.A.R.V.I.S.</span>
+        </div>
+      </div>
+
+      <p className="fade-up mb-3 font-mono text-[0.7rem] tracking-[0.35em] text-cyan-400/80 uppercase">
         Just A Rather Very Intelligent System
       </p>
-      <h1 className="mb-3 text-6xl font-bold tracking-tight text-white">
-        AYOL HUB
-      </h1>
-      <p className="mb-12 text-lg text-slate-500">
-        Unified control center for all active projects
+      <h1 className="fade-up glow-text mb-3 text-6xl font-bold tracking-tight">AYOL HUB</h1>
+      <p className="fade-up mb-12 text-lg text-slate-400">
+        Unified control center for all active systems
       </p>
 
       <div className="grid w-full max-w-md grid-cols-2 gap-4">
         <Link
           href="/projects"
-          className="group rounded-xl border border-slate-700 bg-slate-900 p-6 text-left transition-all hover:border-blue-500/50 hover:bg-slate-800"
+          className="glass glass-hover hud-corners scan-sweep group fade-up p-6 text-left"
         >
           <div className="mb-3 text-3xl">🎯</div>
-          <div className="font-semibold text-white transition-colors group-hover:text-blue-300">
+          <div className="font-semibold text-white transition-colors group-hover:text-cyan-200">
             Projects
           </div>
-          <div className="mt-1 text-sm text-slate-500">9 active workstreams</div>
+          <div className="mt-1 font-mono text-xs text-slate-500">9 active workstreams</div>
         </Link>
 
         <a
           href="https://books.ayol.net"
           target="_blank"
           rel="noopener noreferrer"
-          className="group rounded-xl border border-slate-700 bg-slate-900 p-6 text-left transition-all hover:border-blue-500/50 hover:bg-slate-800"
+          className="glass glass-hover hud-corners scan-sweep group fade-up p-6 text-left"
         >
           <div className="mb-3 text-3xl">💰</div>
-          <div className="font-semibold text-white transition-colors group-hover:text-blue-300">
+          <div className="font-semibold text-white transition-colors group-hover:text-cyan-200">
             Finance
           </div>
-          <div className="mt-1 text-sm text-slate-500">books.ayol.net</div>
+          <div className="mt-1 font-mono text-xs text-slate-500">books.ayol.net</div>
         </a>
       </div>
     </div>

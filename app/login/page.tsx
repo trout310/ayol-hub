@@ -33,25 +33,40 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-[80vh] flex-col items-center justify-center">
-      <p className="mb-4 font-mono text-xs tracking-[0.35em] text-blue-400 uppercase">
+    <div className="flex min-h-[85vh] flex-col items-center justify-center">
+      {/* Arc reactor */}
+      <div className="fade-up relative mb-8 flex items-center justify-center">
+        <div className="absolute h-52 w-52 rounded-full bg-cyan-500/10 blur-3xl" aria-hidden />
+        <div className="arc-reactor" aria-hidden>
+          <div className="arc-core" />
+        </div>
+        <div className="absolute font-mono text-[0.7rem] tracking-[0.3em] text-cyan-300/80">
+          J.A.R.V.I.S.
+        </div>
+      </div>
+
+      <p className="fade-up mb-2 font-mono text-[0.7rem] tracking-[0.35em] text-cyan-400/80 uppercase">
         Just A Rather Very Intelligent System
       </p>
-      <h1 className="mb-8 text-4xl font-bold tracking-tight text-white">AYOL HUB</h1>
-      <form onSubmit={submit} className="w-full max-w-xs">
+      <h1 className="fade-up glow-text mb-8 text-4xl font-bold tracking-tight">AYOL HUB</h1>
+
+      <form onSubmit={submit} className="fade-up w-full max-w-xs px-4">
+        <label className="hud-label mb-2 block">Authentication required</label>
         <input
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
+          placeholder="••••••••"
           autoFocus
-          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-blue-500/60"
+          className="hud-input w-full rounded-lg px-4 py-3 text-white placeholder-slate-600"
         />
-        {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
+        {error && (
+          <p className="mt-3 font-mono text-xs text-red-400">⚠ {error}</p>
+        )}
         <button
           type="submit"
           disabled={loading}
-          className="mt-4 w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+          className="hud-btn mt-4 w-full rounded-lg px-4 py-3 font-semibold text-slate-950 disabled:opacity-50"
         >
           {loading ? 'Authenticating…' : 'Enter'}
         </button>

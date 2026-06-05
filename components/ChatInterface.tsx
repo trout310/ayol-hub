@@ -77,13 +77,18 @@ export default function ChatInterface({ projectId }: Props) {
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-slate-700 bg-slate-900">
+    <div className="glass flex flex-1 flex-col overflow-hidden">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {messages.length === 0 && (
-          <p className="mt-8 text-center font-mono text-sm text-slate-600">
-            How can I assist you?
-          </p>
+          <div className="mt-10 flex flex-col items-center gap-3 text-center">
+            <div className="arc-reactor scale-[0.4] opacity-70" aria-hidden>
+              <div className="arc-core" />
+            </div>
+            <p className="font-mono text-xs tracking-[0.25em] text-cyan-400/60 uppercase">
+              How can I assist you?
+            </p>
+          </div>
         )}
         {messages.map((msg, i) => (
           <div
@@ -91,20 +96,20 @@ export default function ChatInterface({ projectId }: Props) {
             className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             {msg.role === 'assistant' && (
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-cyan-400 text-xs font-bold text-slate-950 shadow-[0_0_12px_rgba(34,211,238,0.5)]">
                 J
               </div>
             )}
             <div
               className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm leading-relaxed ${
                 msg.role === 'user'
-                  ? 'rounded-tr-sm bg-blue-600 text-white'
-                  : 'rounded-tl-sm bg-slate-800 text-slate-100'
+                  ? 'rounded-tr-sm bg-gradient-to-br from-sky-600 to-cyan-600 text-white shadow-[0_0_18px_-6px_rgba(34,211,238,0.6)]'
+                  : 'rounded-tl-sm border border-cyan-400/10 bg-slate-900/70 text-slate-100'
               }`}
             >
               {msg.content ||
                 (streaming && msg.role === 'assistant' ? (
-                  <span className="animate-pulse text-blue-400">▋</span>
+                  <span className="animate-pulse text-cyan-400">▋</span>
                 ) : null)}
             </div>
           </div>
@@ -113,7 +118,7 @@ export default function ChatInterface({ projectId }: Props) {
       </div>
 
       {/* Input bar */}
-      <div className="flex gap-2 border-t border-slate-700 p-3">
+      <div className="flex gap-2 border-t border-cyan-400/15 p-3">
         <VoiceButton onTranscript={(text) => setInput(prev => prev + text)} />
         <input
           value={input}
@@ -125,13 +130,13 @@ export default function ChatInterface({ projectId }: Props) {
             }
           }}
           placeholder="Message JARVIS…"
-          className="flex-1 rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-sm text-white outline-none transition-colors placeholder:text-slate-600 focus:border-blue-500"
+          className="hud-input flex-1 rounded-lg px-4 py-2 text-sm text-white placeholder:text-slate-600"
         />
         <button
           type="button"
           onClick={() => sendMessage(input)}
           disabled={streaming || !input.trim()}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
+          className="hud-btn rounded-lg px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-40"
         >
           {streaming ? '…' : 'Send'}
         </button>
