@@ -37,21 +37,48 @@ export default function ChatInterface({ projectId }: Props) {
     setStreaming(true)
 
     let assistantContent = ''
+    let streamed = false
     setMessages(prev => [...prev, { role: 'assistant', content: '' }])
+
+    const render = () => {
+      setMessages(prev => {
+        const updated = [...prev]
+        updated[updated.length - 1] = { role: 'assistant', content: assistantContent }
+        return updated
+      })
+    }
 
     try {
       const newSid = await streamChat(projectId, msg, sessionId, (event) => {
-        // Extract text from stream-json content_block_delta events
+        // 1. Streaming deltas (with --include-partial-messages) — token-by-token.
         if (
           event.type === 'content_block_delta' &&
           (event.delta as { type?: string })?.type === 'text_delta'
         ) {
+          streamed = true
           assistantContent += (event.delta as { text?: string }).text ?? ''
-          setMessages(prev => {
-            const updated = [...prev]
-            updated[updated.length - 1] = { role: 'assistant', content: assistantContent }
-            return updated
-          })
+          render()
+        }
+        // 2. Full assistant message — fallback when no deltas arrived.
+        else if (event.type === 'assistant' && !streamed) {
+          const content = (event as { message?: { content?: Array<{ type?: string; text?: string }> } })
+            .message?.content
+          const text = (content ?? [])
+            .filter((b) => b.type === 'text')
+            .map((b) => b.text ?? '')
+            .join('')
+          if (text) {
+            assistantContent = text
+            render()
+          }
+        }
+        // 3. Final result — last-resort fallback if nothing else produced text.
+        else if (event.type === 'result' && !streamed && !assistantContent) {
+          const result = (event as { result?: string }).result
+          if (typeof result === 'string' && result) {
+            assistantContent = result
+            render()
+          }
         }
         if (event.session_id) {
           const sid = event.session_id as string
