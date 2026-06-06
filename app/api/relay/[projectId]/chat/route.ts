@@ -12,7 +12,16 @@ export async function POST(
   { params }: { params: Promise<Params> }
 ) {
   const { projectId } = await params
-  const body = await req.json()
+
+  let body: unknown
+  try {
+    body = await req.json()
+  } catch {
+    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
 
   const res = await fetch(`${RELAY_URL}/projects/${projectId}/chat`, {
     method: 'POST',

@@ -80,6 +80,12 @@ export default function ChatInterface({ projectId }: Props) {
             render()
           }
         }
+        // 4. Explicit relay error — show it instead of leaving an empty bubble.
+        else if (event.type === 'error') {
+          const errText = (event as { error?: string }).error ?? 'Unknown error'
+          assistantContent = `⚠️ ${errText}`
+          render()
+        }
         if (event.session_id) {
           const sid = event.session_id as string
           setSessionId(sid)

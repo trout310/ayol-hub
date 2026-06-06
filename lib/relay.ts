@@ -25,21 +25,27 @@ export async function streamChat(
   let newSessionId: string | null = null
   let buf = ''
 
+  const handle = (line: string) => {
+    if (!line.trim()) return
+    try {
+      const event = JSON.parse(line)
+      if (event.session_id && !newSessionId) newSessionId = event.session_id as string
+      onChunk(event)
+    } catch {}
+  }
+
   while (true) {
     const { done, value } = await reader.read()
     if (done) break
     buf += decoder.decode(value, { stream: true })
     const lines = buf.split('\n')
     buf = lines.pop() ?? ''
-    for (const line of lines) {
-      if (!line.trim()) continue
-      try {
-        const event = JSON.parse(line)
-        if (event.session_id && !newSessionId) newSessionId = event.session_id as string
-        onChunk(event)
-      } catch {}
-    }
+    for (const line of lines) handle(line)
   }
+
+  // Flush any trailing fragment that arrived without a final newline — otherwise
+  // the last event (often the one carrying the full reply) is silently dropped.
+  handle(buf)
 
   return newSessionId
 }

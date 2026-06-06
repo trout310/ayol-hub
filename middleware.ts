@@ -26,10 +26,14 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
+  // Fail closed: if the credentials aren't configured, never authenticate (a
+  // missing env var would otherwise make expectedToken() a fixed, guessable hash).
+  const configured = !!(process.env.HUB_USERNAME && process.env.HUB_PASSWORD)
+
   const cookie = req.cookies.get(COOKIE)?.value
   const expected = await expectedToken()
 
-  if (cookie && cookie === expected) {
+  if (configured && cookie && cookie === expected) {
     return NextResponse.next()
   }
 
