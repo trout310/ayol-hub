@@ -1,14 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -21,8 +19,10 @@ export default function LoginPage() {
         body: JSON.stringify({ username, password }),
       })
       if (res.ok) {
-        router.push('/')
-        router.refresh()
+        // Hard navigation so the just-set auth cookie is sent with the request
+        // for "/". A client-side router.push() can race the cookie commit and
+        // get bounced by middleware, leaving the button stuck on "Authenticating".
+        window.location.href = '/'
       } else {
         setError('Incorrect username or password')
         setLoading(false)
