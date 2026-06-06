@@ -259,6 +259,17 @@ body {
     transform: rotate(360deg);
   }
 }
+
+/* JARVIS logo / spinner rotation speeds */
+.jarvis-spin-slow {
+  animation: spin 16s linear infinite;
+}
+.jarvis-spin-fast {
+  animation: spin 1.1s linear infinite;
+}
+.jarvis-spin-rev {
+  animation: spin 10s linear infinite reverse;
+}
 @keyframes breathe {
   0%,
   100% {
@@ -285,8 +296,14 @@ body {
   .arc-reactor::before,
   .arc-reactor::after,
   .arc-core,
-  .fade-up {
+  .fade-up,
+  .jarvis-spin-slow,
+  .jarvis-spin-rev {
     animation: none !important;
+  }
+  /* keep the thinking spinner moving even under reduced-motion, but slower */
+  .jarvis-spin-fast {
+    animation: spin 2.2s linear infinite;
   }
 }
 

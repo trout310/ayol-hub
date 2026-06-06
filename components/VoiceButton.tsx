@@ -2,10 +2,12 @@
 import { useState, useCallback } from 'react'
 
 interface Props {
-  onTranscript: (text: string) => void
+  // Called with the final transcript; the chat sends it as a voice message
+  // (and replies in JARVIS's voice).
+  onResult: (text: string) => void
 }
 
-export default function VoiceButton({ onTranscript }: Props) {
+export default function VoiceButton({ onResult }: Props) {
   const [listening, setListening] = useState(false)
 
   const startListening = useCallback(() => {
@@ -23,15 +25,15 @@ export default function VoiceButton({ onTranscript }: Props) {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recognition.onresult = (e: any) => {
-      const transcript = e.results[0][0].transcript as string
-      onTranscript(transcript + ' ')
+      const transcript = (e.results[0][0].transcript as string).trim()
+      if (transcript) onResult(transcript)
     }
     recognition.onend = () => setListening(false)
     recognition.onerror = () => setListening(false)
 
     recognition.start()
     setListening(true)
-  }, [onTranscript])
+  }, [onResult])
 
   return (
     <button

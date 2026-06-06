@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import JarvisLogo from '@/components/JarvisLogo'
 
 export default function LoginPage() {
   const [username, setUsername] = useState('')
@@ -35,12 +36,10 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-[85vh] flex-col items-center justify-center">
-      {/* Arc reactor */}
+      {/* JARVIS HUD reticle */}
       <div className="fade-up relative mb-8 flex items-center justify-center">
         <div className="absolute h-52 w-52 rounded-full bg-cyan-500/10 blur-3xl" aria-hidden />
-        <div className="arc-reactor" aria-hidden>
-          <div className="arc-core" />
-        </div>
+        <JarvisLogo size={170} />
         <div className="absolute font-mono text-[0.7rem] tracking-[0.3em] text-cyan-300/80">
           J.A.R.V.I.S.
         </div>

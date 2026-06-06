@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { streamChat } from '@/lib/relay'
 import VoiceButton from './VoiceButton'
+import JarvisLogo from './JarvisLogo'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -16,8 +17,11 @@ export default function ChatInterface({ projectId }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
+  const [elapsed, setElapsed] = useState(0) // seconds since the request started
   const [sessionId, setSessionId] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
     const stored = localStorage.getItem(`session:${projectId}`)
@@ -28,13 +32,42 @@ export default function ChatInterface({ projectId }: Props) {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const sendMessage = async (text: string) => {
+  // Synthesize the reply in JARVIS's voice and play it (used for voice messages).
+  const speak = async (text: string) => {
+    const clean = text.replace(/^⚠️\s*/, '').slice(0, 800).trim()
+    if (!clean) return
+    try {
+      const res = await fetch('/api/voice/synth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: clean }),
+      })
+      if (!res.ok) return
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      audioRef.current?.pause()
+      const audio = new Audio(url)
+      audioRef.current = audio
+      audio.onended = () => URL.revokeObjectURL(url)
+      await audio.play().catch(() => {}) // autoplay may be blocked; fail quietly
+    } catch {
+      /* TTS is best-effort */
+    }
+  }
+
+  const sendMessage = async (text: string, opts: { voice?: boolean } = {}) => {
     const msg = text.trim()
     if (!msg || streaming) return
 
     setInput('')
     setMessages(prev => [...prev, { role: 'user', content: msg }])
     setStreaming(true)
+
+    // Start the "thinking" elapsed-seconds timer.
+    const startedAt = Date.now()
+    setElapsed(0)
+    if (timerRef.current) clearInterval(timerRef.current)
+    timerRef.current = setInterval(() => setElapsed((Date.now() - startedAt) / 1000), 100)
 
     let assistantContent = ''
     let streamed = false
@@ -97,6 +130,11 @@ export default function ChatInterface({ projectId }: Props) {
         setSessionId(newSid)
         localStorage.setItem(`session:${projectId}`, newSid)
       }
+
+      // Speak the reply back in JARVIS's voice if this was a voice message.
+      if (opts.voice && assistantContent && !assistantContent.startsWith('⚠️')) {
+        void speak(assistantContent)
+      }
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : 'Unknown error'
       setMessages(prev => {
@@ -105,6 +143,10 @@ export default function ChatInterface({ projectId }: Props) {
         return updated
       })
     } finally {
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
+      }
       setStreaming(false)
     }
   }
@@ -115,44 +157,53 @@ export default function ChatInterface({ projectId }: Props) {
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {messages.length === 0 && (
           <div className="mt-10 flex flex-col items-center gap-3 text-center">
-            <div className="arc-reactor scale-[0.4] opacity-70" aria-hidden>
-              <div className="arc-core" />
-            </div>
+            <JarvisLogo size={64} className="opacity-70" />
             <p className="font-mono text-xs tracking-[0.25em] text-cyan-400/60 uppercase">
               How can I assist you?
             </p>
           </div>
         )}
-        {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            {msg.role === 'assistant' && (
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-cyan-400 text-xs font-bold text-slate-950 shadow-[0_0_12px_rgba(34,211,238,0.5)]">
-                J
-              </div>
-            )}
+        {messages.map((msg, i) => {
+          const isLastAssistant = i === messages.length - 1 && msg.role === 'assistant'
+          const thinking = isLastAssistant && streaming && msg.content === ''
+          return (
             <div
-              className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm leading-relaxed ${
-                msg.role === 'user'
-                  ? 'rounded-tr-sm bg-gradient-to-br from-sky-600 to-cyan-600 text-white shadow-[0_0_18px_-6px_rgba(34,211,238,0.6)]'
-                  : 'rounded-tl-sm border border-cyan-400/10 bg-slate-900/70 text-slate-100'
-              }`}
+              key={i}
+              className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              {msg.content ||
-                (streaming && msg.role === 'assistant' ? (
-                  <span className="animate-pulse text-cyan-400">▋</span>
-                ) : null)}
+              {msg.role === 'assistant' && (
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-cyan-400 text-xs font-bold text-slate-950 shadow-[0_0_12px_rgba(34,211,248,0.5)]">
+                  J
+                </div>
+              )}
+              <div
+                className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm leading-relaxed ${
+                  msg.role === 'user'
+                    ? 'rounded-tr-sm bg-gradient-to-br from-sky-600 to-cyan-600 text-white shadow-[0_0_18px_-6px_rgba(34,211,238,0.6)]'
+                    : 'rounded-tl-sm border border-cyan-400/10 bg-slate-900/70 text-slate-100'
+                }`}
+              >
+                {thinking ? (
+                  <span className="flex items-center gap-2 text-cyan-300/80">
+                    <JarvisLogo size={18} spinning />
+                    <span className="font-mono text-xs">Thinking… {elapsed.toFixed(1)}s</span>
+                  </span>
+                ) : (
+                  msg.content ||
+                  (streaming && msg.role === 'assistant' ? (
+                    <span className="animate-pulse text-cyan-400">▋</span>
+                  ) : null)
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
         <div ref={bottomRef} />
       </div>
 
       {/* Input bar */}
       <div className="flex gap-2 border-t border-cyan-400/15 p-3">
-        <VoiceButton onTranscript={(text) => setInput(prev => prev + text)} />
+        <VoiceButton onResult={(text) => sendMessage(text, { voice: true })} />
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter, JetBrains_Mono } from 'next/font/google'
 import Link from 'next/link'
+import JarvisLogo from '@/components/JarvisLogo'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
@@ -26,10 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               href="/"
               className="group flex items-center gap-2.5 font-mono font-bold tracking-wider transition-colors"
             >
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400/60" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.9)]" />
-              </span>
+              <JarvisLogo size={26} />
               <span className="text-sm text-sky-300 transition-colors group-hover:text-cyan-200">
                 AYOL HUB
               </span>

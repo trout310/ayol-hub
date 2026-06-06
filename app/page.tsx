@@ -1,17 +1,18 @@
 import Link from 'next/link'
+import JarvisLogo from '@/components/JarvisLogo'
 
 export default function HomePage() {
   return (
     <div className="flex min-h-[80vh] flex-col items-center justify-center text-center">
-      {/* Arc-reactor halo behind the title */}
+      {/* JARVIS HUD reticle behind the title */}
       <div className="fade-up relative mb-10 flex items-center justify-center">
         <div className="absolute h-56 w-56 rounded-full bg-cyan-500/10 blur-3xl" aria-hidden />
-        <div className="arc-reactor opacity-90" aria-hidden>
-          <div className="arc-core" />
-        </div>
+        <JarvisLogo size={180} />
         <div className="absolute flex flex-col items-center">
-          <p className="hud-label mb-2">Online</p>
-          <span className="font-mono text-xs tracking-[0.3em] text-cyan-300/80">J.A.R.V.I.S.</span>
+          <p className="hud-label mb-1">Online</p>
+          <span className="font-mono text-[0.65rem] tracking-[0.3em] text-cyan-300/80">
+            J.A.R.V.I.S.
+          </span>
         </div>
       </div>
 
