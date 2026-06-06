@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { streamChat } from '@/lib/relay'
-import VoiceButton from './VoiceButton'
+import { useSpeechRecognition } from '@/lib/useSpeechRecognition'
 import JarvisLogo from './JarvisLogo'
 
 interface Message {
@@ -13,6 +13,11 @@ interface Props {
   projectId: string
 }
 
+// Tiny silent WAV used to "unlock" audio playback during a user gesture so the
+// later TTS reply can play without being blocked by the browser autoplay policy.
+const SILENT_WAV =
+  'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA='
+
 export default function ChatInterface({ projectId }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -22,17 +27,64 @@ export default function ChatInterface({ projectId }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const messagesRef = useRef<Message[]>([]) // mirror for synchronous reads
+
+  // Load persisted history + session for this project on mount / project change.
+  useEffect(() => {
+    let history: Message[] = []
+    try {
+      const raw = localStorage.getItem(`chat:${projectId}`)
+      if (raw) history = JSON.parse(raw)
+    } catch {
+      history = []
+    }
+    if (
+      history.length &&
+      history[history.length - 1].role === 'assistant' &&
+      !history[history.length - 1].content
+    ) {
+      history = history.slice(0, -1)
+    }
+    messagesRef.current = history
+    setMessages(history)
+    setSessionId(localStorage.getItem(`session:${projectId}`) || null)
+  }, [projectId])
 
   useEffect(() => {
-    const stored = localStorage.getItem(`session:${projectId}`)
-    if (stored) setSessionId(stored)
-  }, [projectId])
+    messagesRef.current = messages
+  }, [messages])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Synthesize the reply in JARVIS's voice and play it (used for voice messages).
+  const persist = (msgs: Message[]) => {
+    try {
+      localStorage.setItem(`chat:${projectId}`, JSON.stringify(msgs.slice(-100)))
+    } catch {
+      /* storage unavailable — non-fatal */
+    }
+  }
+
+  // Unlock audio during a user gesture so the later TTS reply isn't autoplay-blocked.
+  const primeAudio = () => {
+    try {
+      if (!audioRef.current) audioRef.current = new Audio()
+      const a = audioRef.current
+      a.src = SILENT_WAV
+      a.muted = true
+      a.play()
+        .then(() => {
+          a.pause()
+          a.currentTime = 0
+          a.muted = false
+        })
+        .catch(() => {})
+    } catch {
+      /* ignore */
+    }
+  }
+
   const speak = async (text: string) => {
     const clean = text.replace(/^⚠️\s*/, '').slice(0, 800).trim()
     if (!clean) return
@@ -45,11 +97,12 @@ export default function ChatInterface({ projectId }: Props) {
       if (!res.ok) return
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
-      audioRef.current?.pause()
-      const audio = new Audio(url)
-      audioRef.current = audio
-      audio.onended = () => URL.revokeObjectURL(url)
-      await audio.play().catch(() => {}) // autoplay may be blocked; fail quietly
+      const a = audioRef.current ?? new Audio()
+      audioRef.current = a
+      a.muted = false
+      a.src = url
+      a.onended = () => URL.revokeObjectURL(url)
+      await a.play().catch(() => {})
     } catch {
       /* TTS is best-effort */
     }
@@ -60,10 +113,16 @@ export default function ChatInterface({ projectId }: Props) {
     if (!msg || streaming) return
 
     setInput('')
-    setMessages(prev => [...prev, { role: 'user', content: msg }])
+    let working: Message[] = [
+      ...messagesRef.current,
+      { role: 'user', content: msg },
+      { role: 'assistant', content: '' },
+    ]
+    messagesRef.current = working
+    setMessages(working)
+    persist(working)
     setStreaming(true)
 
-    // Start the "thinking" elapsed-seconds timer.
     const startedAt = Date.now()
     setElapsed(0)
     if (timerRef.current) clearInterval(timerRef.current)
@@ -71,19 +130,15 @@ export default function ChatInterface({ projectId }: Props) {
 
     let assistantContent = ''
     let streamed = false
-    setMessages(prev => [...prev, { role: 'assistant', content: '' }])
 
     const render = () => {
-      setMessages(prev => {
-        const updated = [...prev]
-        updated[updated.length - 1] = { role: 'assistant', content: assistantContent }
-        return updated
-      })
+      working = [...working.slice(0, -1), { role: 'assistant', content: assistantContent }]
+      messagesRef.current = working
+      setMessages(working)
     }
 
     try {
       const newSid = await streamChat(projectId, msg, sessionId, (event) => {
-        // 1. Streaming deltas (with --include-partial-messages) — token-by-token.
         if (
           event.type === 'content_block_delta' &&
           (event.delta as { type?: string })?.type === 'text_delta'
@@ -91,32 +146,22 @@ export default function ChatInterface({ projectId }: Props) {
           streamed = true
           assistantContent += (event.delta as { text?: string }).text ?? ''
           render()
-        }
-        // 2. Full assistant message — fallback when no deltas arrived.
-        else if (event.type === 'assistant' && !streamed) {
+        } else if (event.type === 'assistant' && !streamed) {
           const content = (event as { message?: { content?: Array<{ type?: string; text?: string }> } })
             .message?.content
-          const text = (content ?? [])
-            .filter((b) => b.type === 'text')
-            .map((b) => b.text ?? '')
-            .join('')
-          if (text) {
-            assistantContent = text
+          const t = (content ?? []).filter((b) => b.type === 'text').map((b) => b.text ?? '').join('')
+          if (t) {
+            assistantContent = t
             render()
           }
-        }
-        // 3. Final result — last-resort fallback if nothing else produced text.
-        else if (event.type === 'result' && !streamed && !assistantContent) {
+        } else if (event.type === 'result' && !streamed && !assistantContent) {
           const result = (event as { result?: string }).result
           if (typeof result === 'string' && result) {
             assistantContent = result
             render()
           }
-        }
-        // 4. Explicit relay error — show it instead of leaving an empty bubble.
-        else if (event.type === 'error') {
-          const errText = (event as { error?: string }).error ?? 'Unknown error'
-          assistantContent = `⚠️ ${errText}`
+        } else if (event.type === 'error') {
+          assistantContent = `⚠️ ${(event as { error?: string }).error ?? 'Unknown error'}`
           render()
         }
         if (event.session_id) {
@@ -131,37 +176,52 @@ export default function ChatInterface({ projectId }: Props) {
         localStorage.setItem(`session:${projectId}`, newSid)
       }
 
-      // Speak the reply back in JARVIS's voice if this was a voice message.
       if (opts.voice && assistantContent && !assistantContent.startsWith('⚠️')) {
         void speak(assistantContent)
       }
     } catch (e) {
-      const errMsg = e instanceof Error ? e.message : 'Unknown error'
-      setMessages(prev => {
-        const updated = [...prev]
-        updated[updated.length - 1] = { role: 'assistant', content: `⚠️ ${errMsg}` }
-        return updated
-      })
+      assistantContent = `⚠️ ${e instanceof Error ? e.message : 'Unknown error'}`
+      render()
     } finally {
       if (timerRef.current) {
         clearInterval(timerRef.current)
         timerRef.current = null
       }
+      persist(messagesRef.current)
       setStreaming(false)
     }
   }
+
+  const { listening, start: startVoice } = useSpeechRecognition({
+    onResult: (text) => sendMessage(text, { voice: true }),
+    onStart: primeAudio,
+  })
 
   return (
     <div className="glass flex flex-1 flex-col overflow-hidden">
       {/* Messages */}
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {messages.length === 0 && (
-          <div className="mt-10 flex flex-col items-center gap-3 text-center">
-            <JarvisLogo size={64} className="opacity-70" />
-            <p className="font-mono text-xs tracking-[0.25em] text-cyan-400/60 uppercase">
-              How can I assist you?
+          <button
+            type="button"
+            onClick={startVoice}
+            className="group mx-auto mt-10 flex flex-col items-center gap-3 text-center transition-opacity"
+            title="Tap to speak"
+          >
+            <JarvisLogo
+              size={72}
+              spinning={listening}
+              className="opacity-70 transition-opacity group-hover:opacity-100"
+            />
+            <p className="font-mono text-xs tracking-[0.25em] text-cyan-400/60 uppercase group-hover:text-cyan-300/80">
+              {listening ? 'Listening…' : 'How can I assist you?'}
             </p>
-          </div>
+            {!listening && (
+              <span className="font-mono text-[0.6rem] tracking-[0.2em] text-slate-600 uppercase">
+                tap to speak · or type below
+              </span>
+            )}
+          </button>
         )}
         {messages.map((msg, i) => {
           const isLastAssistant = i === messages.length - 1 && msg.role === 'assistant'
@@ -172,12 +232,12 @@ export default function ChatInterface({ projectId }: Props) {
               className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               {msg.role === 'assistant' && (
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-cyan-400 text-xs font-bold text-slate-950 shadow-[0_0_12px_rgba(34,211,248,0.5)]">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-cyan-400 text-xs font-bold text-slate-950 shadow-[0_0_12px_rgba(34,211,238,0.5)]">
                   J
                 </div>
               )}
               <div
-                className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm leading-relaxed ${
+                className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-4 py-2 text-sm leading-relaxed ${
                   msg.role === 'user'
                     ? 'rounded-tr-sm bg-gradient-to-br from-sky-600 to-cyan-600 text-white shadow-[0_0_18px_-6px_rgba(34,211,238,0.6)]'
                     : 'rounded-tl-sm border border-cyan-400/10 bg-slate-900/70 text-slate-100'
@@ -202,8 +262,19 @@ export default function ChatInterface({ projectId }: Props) {
       </div>
 
       {/* Input bar */}
-      <div className="flex gap-2 border-t border-cyan-400/15 p-3">
-        <VoiceButton onResult={(text) => sendMessage(text, { voice: true })} />
+      <div className="flex items-center gap-2 border-t border-cyan-400/15 p-3">
+        <button
+          type="button"
+          onClick={startVoice}
+          title={listening ? 'Listening…' : 'Speak to JARVIS'}
+          className={`flex items-center justify-center rounded-lg border p-2 transition-all ${
+            listening
+              ? 'border-red-500/60 bg-red-600/20 shadow-[0_0_16px_-4px_rgba(239,68,68,0.85)]'
+              : 'border-cyan-400/20 bg-slate-900/70 hover:border-cyan-400/50'
+          }`}
+        >
+          <JarvisLogo size={22} spinning={listening} />
+        </button>
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
