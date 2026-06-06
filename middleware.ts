@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const COOKIE = 'hub_auth'
 
-// Derive a cookie token from the shared password. The plaintext password is
-// never stored in the cookie — only this hash, which the middleware re-derives
-// and compares. Runs on the edge runtime (Web Crypto is available there).
+// Derive a cookie token from the username + password. Neither is stored in the
+// cookie — only this hash, which the middleware re-derives and compares. The
+// username is normalized (trim + lowercase) so it's case-insensitive. Runs on
+// the edge runtime (Web Crypto is available there). Salt is v2 (was v1 before
+// username was added) so any pre-username cookie is invalidated.
 async function expectedToken(): Promise<string> {
+  const user = (process.env.HUB_USERNAME ?? '').trim().toLowerCase()
   const pw = process.env.HUB_PASSWORD ?? ''
-  const data = new TextEncoder().encode(pw + ':ayol-hub-v1')
+  const data = new TextEncoder().encode(`${user}:${pw}:ayol-hub-v2`)
   const digest = await crypto.subtle.digest('SHA-256', data)
   return Array.from(new Uint8Array(digest))
     .map((b) => b.toString(16).padStart(2, '0'))

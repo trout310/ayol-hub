@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -17,13 +18,13 @@ export default function LoginPage() {
       const res = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ username, password }),
       })
       if (res.ok) {
         router.push('/')
         router.refresh()
       } else {
-        setError('Incorrect password')
+        setError('Incorrect username or password')
         setLoading(false)
       }
     } catch {
@@ -53,11 +54,20 @@ export default function LoginPage() {
       <form onSubmit={submit} className="fade-up w-full max-w-xs px-4">
         <label className="hud-label mb-2 block">Authentication required</label>
         <input
+          type="text"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="Username"
+          autoFocus
+          autoComplete="username"
+          className="hud-input mb-3 w-full rounded-lg px-4 py-3 text-white placeholder-slate-600"
+        />
+        <input
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="••••••••"
-          autoFocus
+          placeholder="Password"
+          autoComplete="current-password"
           className="hud-input w-full rounded-lg px-4 py-3 text-white placeholder-slate-600"
         />
         {error && (

@@ -1,30 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// Must match middleware.ts exactly — same salt, same algorithm.
-async function token(pw: string): Promise<string> {
-  const data = new TextEncoder().encode(pw + ':ayol-hub-v1')
+const COOKIE_NAME = 'hub_auth'
+
+// Must match middleware.ts exactly — same salt, same algorithm. Built from the
+// ENV username (normalized) + ENV password so the cookie always matches what the
+// middleware re-derives, regardless of which accepted alias the user typed.
+async function token(): Promise<string> {
+  const user = (process.env.HUB_USERNAME ?? '').trim().toLowerCase()
+  const pw = process.env.HUB_PASSWORD ?? ''
+  const data = new TextEncoder().encode(`${user}:${pw}:ayol-hub-v2`)
   const digest = await crypto.subtle.digest('SHA-256', data)
   return Array.from(new Uint8Array(digest))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('')
 }
 
+// Accept the configured username case-insensitively, plus its local-part alias
+// (e.g. "aaron" for "aaron@ayol.net").
+function usernameMatches(submitted: string): boolean {
+  const expected = (process.env.HUB_USERNAME ?? '').trim().toLowerCase()
+  if (!expected) return false
+  const given = submitted.trim().toLowerCase()
+  const localPart = expected.includes('@') ? expected.split('@')[0] : expected
+  return given === expected || given === localPart
+}
+
 export async function POST(req: NextRequest) {
+  let username = ''
   let password = ''
   try {
     const body = await req.json()
+    username = typeof body.username === 'string' ? body.username : ''
     password = typeof body.password === 'string' ? body.password : ''
   } catch {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
   }
 
-  const expected = process.env.HUB_PASSWORD ?? ''
-  if (!expected || password !== expected) {
-    return NextResponse.json({ error: 'Invalid password' }, { status: 401 })
+  const expectedPw = process.env.HUB_PASSWORD ?? ''
+  if (!expectedPw || password !== expectedPw || !usernameMatches(username)) {
+    return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
   }
 
   const res = NextResponse.json({ ok: true })
-  res.cookies.set(COOKIE_NAME, await token(password), {
+  res.cookies.set(COOKIE_NAME, await token(), {
     httpOnly: true,
     secure: true,
     sameSite: 'lax',
@@ -33,5 +51,3 @@ export async function POST(req: NextRequest) {
   })
   return res
 }
-
-const COOKIE_NAME = 'hub_auth'
