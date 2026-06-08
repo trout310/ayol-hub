@@ -8,7 +8,7 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains' })
 
 export const metadata: Metadata = {
-  title: 'AYOL Hub',
+  title: 'JARVIS',
   description: 'J.A.R.V.I.S. — Just A Rather Very Intelligent System',
 }
 
@@ -29,7 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             >
               <JarvisLogo size={26} />
               <span className="text-sm text-sky-300 transition-colors group-hover:text-cyan-200">
-                AYOL HUB
+                JARVIS
               </span>
             </Link>
             <div className="flex items-center gap-7 text-sm">

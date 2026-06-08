@@ -48,7 +48,7 @@ export default function LoginPage() {
       <p className="fade-up mb-2 font-mono text-[0.7rem] tracking-[0.35em] text-cyan-400/80 uppercase">
         Just A Rather Very Intelligent System
       </p>
-      <h1 className="fade-up glow-text mb-8 text-4xl font-bold tracking-tight">AYOL HUB</h1>
+      <h1 className="fade-up glow-text mb-8 text-4xl font-bold tracking-tight">JARVIS</h1>
 
       <form onSubmit={submit} className="fade-up w-full max-w-xs px-4">
         <label className="hud-label mb-2 block">Authentication required</label>

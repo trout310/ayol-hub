@@ -19,7 +19,7 @@ export default function HomePage() {
       <p className="fade-up mb-3 font-mono text-[0.7rem] tracking-[0.35em] text-cyan-400/80 uppercase">
         Just A Rather Very Intelligent System
       </p>
-      <h1 className="fade-up glow-text mb-3 text-6xl font-bold tracking-tight">AYOL HUB</h1>
+      <h1 className="fade-up glow-text mb-3 text-6xl font-bold tracking-tight">JARVIS</h1>
       <p className="fade-up mb-12 text-lg text-slate-400">
         Unified control center for all active systems
       </p>
