@@ -7,6 +7,7 @@ import SystemHealth from './SystemHealth'
 import ProjectRoster from './ProjectRoster'
 import CommandOutbox from './CommandOutbox'
 import WeeklyRetro from './WeeklyRetro'
+import WorkingItems from './WorkingItems'
 import type { Project } from '@/lib/projects'
 
 interface AttentionItem {
@@ -17,6 +18,16 @@ interface AttentionItem {
   id?: string
   detail?: string
   recommendation?: string
+}
+
+interface WorkingItem {
+  id: string
+  title: string
+  detail?: string
+  project?: string
+  category?: string
+  status: 'pending' | 'in_progress' | 'blocked' | 'resolved'
+  since?: string
 }
 
 interface AgentRow {
@@ -61,6 +72,7 @@ interface MissionData {
   fleet: FleetData
   health: HealthData
   needs_attention: NeedsAttentionData
+  working_items?: WorkingItem[]
 }
 
 function formatTime(iso: string): string {
@@ -170,6 +182,11 @@ export default function MissionDashboard() {
 
         {/* ProjectRoster — full width */}
         <ProjectRoster projects={projects} />
+
+        {/* WorkingItems — background queue, full width */}
+        {mission.working_items && mission.working_items.length > 0 && (
+          <WorkingItems items={mission.working_items} />
+        )}
       </div>
     </ToastProvider>
   )
