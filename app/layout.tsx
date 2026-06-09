@@ -34,6 +34,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </Link>
             <div className="flex items-center gap-7 text-sm">
               <Link
+                href="/mission"
+                className="text-slate-400 transition-colors hover:text-cyan-200"
+              >
+                Mission
+              </Link>
+              <Link
                 href="/projects"
                 className="text-slate-400 transition-colors hover:text-cyan-200"
               >

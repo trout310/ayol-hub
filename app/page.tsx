@@ -1,13 +1,53 @@
-import Link from 'next/link'
+'use client'
+import { useEffect, useState, useCallback } from 'react'
 import JarvisLogo from '@/components/JarvisLogo'
+import ChatInterface from '@/components/ChatInterface'
+import NeedsAttention from '@/components/mission/NeedsAttention'
+
+interface AttentionItem {
+  severity: string
+  category: string
+  title: string
+  source: string
+}
 
 export default function HomePage() {
+  const [items, setItems] = useState<AttentionItem[]>([])
+  const [attentionLoaded, setAttentionLoaded] = useState(false)
+  const [attentionError, setAttentionError] = useState(false)
+  const [lastFetched, setLastFetched] = useState<Date | null>(null)
+
+  const fetchMission = useCallback(async () => {
+    try {
+      const res = await fetch('/api/relay/mission', { cache: 'no-store' })
+      if (!res.ok) throw new Error(`${res.status}`)
+      const data = await res.json()
+      setItems(data?.needs_attention?.items ?? [])
+      setLastFetched(new Date())
+      setAttentionError(false)
+    } catch {
+      setAttentionError(true)
+    } finally {
+      setAttentionLoaded(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchMission()
+    const interval = setInterval(fetchMission, 45_000)
+    return () => clearInterval(interval)
+  }, [fetchMission])
+
+  const lastTimeStr = lastFetched
+    ? lastFetched.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : '--:--'
+
   return (
-    <div className="flex min-h-[80vh] flex-col items-center justify-center text-center">
-      {/* JARVIS HUD reticle behind the title */}
-      <div className="fade-up relative mb-10 flex items-center justify-center">
+    <div className="flex flex-col items-center gap-10">
+      {/* Hero */}
+      <div className="fade-up relative flex items-center justify-center mt-4">
         <div className="absolute h-56 w-56 rounded-full bg-cyan-500/10 blur-3xl" aria-hidden />
-        <JarvisLogo size={180} />
+        <JarvisLogo size={140} />
         <div className="absolute flex flex-col items-center">
           <p className="hud-label mb-1">Online</p>
           <span className="font-mono text-[0.65rem] tracking-[0.3em] text-cyan-300/80">
@@ -16,38 +56,26 @@ export default function HomePage() {
         </div>
       </div>
 
-      <p className="fade-up mb-3 font-mono text-[0.7rem] tracking-[0.35em] text-cyan-400/80 uppercase">
-        Just A Rather Very Intelligent System
-      </p>
-      <h1 className="fade-up glow-text mb-3 text-6xl font-bold tracking-tight">JARVIS</h1>
-      <p className="fade-up mb-12 text-lg text-slate-400">
-        Unified control center for all active systems
-      </p>
+      {/* Chat */}
+      <div className="w-full max-w-2xl">
+        <ChatInterface projectId="jarvis" />
+      </div>
 
-      <div className="grid w-full max-w-md grid-cols-2 gap-4">
-        <Link
-          href="/projects"
-          className="glass glass-hover hud-corners scan-sweep group fade-up p-6 text-left"
-        >
-          <div className="mb-3 text-3xl">🎯</div>
-          <div className="font-semibold text-white transition-colors group-hover:text-cyan-200">
-            Projects
+      {/* Needs Attention */}
+      <div className="w-full max-w-2xl">
+        {!attentionLoaded ? (
+          <div className="glass hud-corners p-5 flex items-center justify-center">
+            <span className="hud-label">Loading…</span>
           </div>
-          <div className="mt-1 font-mono text-xs text-slate-500">9 active workstreams</div>
-        </Link>
-
-        <a
-          href="https://books.ayol.net"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="glass glass-hover hud-corners scan-sweep group fade-up p-6 text-left"
-        >
-          <div className="mb-3 text-3xl">💰</div>
-          <div className="font-semibold text-white transition-colors group-hover:text-cyan-200">
-            Finance
+        ) : attentionError ? (
+          <div className="glass hud-corners p-5 flex items-center justify-center">
+            <span className="hud-label text-red-400/80">
+              Relay unreachable — last data from {lastTimeStr}
+            </span>
           </div>
-          <div className="mt-1 font-mono text-xs text-slate-500">books.ayol.net</div>
-        </a>
+        ) : (
+          <NeedsAttention items={items} />
+        )}
       </div>
     </div>
   )
