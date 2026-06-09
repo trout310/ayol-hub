@@ -8,6 +8,8 @@ interface Params {
   project: string
 }
 
+const SAFE_PROJECT = /^[A-Za-z0-9_-]+$/
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<Params> }
@@ -16,8 +18,11 @@ export async function GET(
     return NextResponse.json({ error: 'Relay not configured' }, { status: 503 })
   }
   const { project } = await params
+  if (!SAFE_PROJECT.test(project)) {
+    return NextResponse.json({ error: 'Invalid project id' }, { status: 400 })
+  }
   try {
-    const res = await fetch(`${RELAY_URL}/reminders/${project}`, {
+    const res = await fetch(`${RELAY_URL}/reminders/${encodeURIComponent(project)}`, {
       headers: { Authorization: `Bearer ${RELAY_SECRET}` },
       signal: AbortSignal.timeout(12_000),
     })
@@ -44,6 +49,9 @@ export async function POST(
   }
 
   const { project } = await params
+  if (!SAFE_PROJECT.test(project)) {
+    return NextResponse.json({ error: 'Invalid project id' }, { status: 400 })
+  }
   let body: unknown
   try {
     body = await req.json()
@@ -52,7 +60,7 @@ export async function POST(
   }
 
   try {
-    const res = await fetch(`${RELAY_URL}/reminders/${project}/action`, {
+    const res = await fetch(`${RELAY_URL}/reminders/${encodeURIComponent(project)}/action`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${RELAY_SECRET}`,
