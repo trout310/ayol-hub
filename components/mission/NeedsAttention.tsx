@@ -10,6 +10,8 @@ interface AttentionItem {
   title: string
   source: string
   id?: string
+  detail?: string
+  recommendation?: string
 }
 
 interface Props {
@@ -29,7 +31,7 @@ const borderColor: Record<string, string> = {
   info: 'border-cyan-500',
 }
 
-const ACTIONABLE_CATEGORIES = new Set(['tier3_pending'])
+const ACTIONABLE_CATEGORIES = new Set(['tier3_pending', 'owner_ask'])
 
 interface ConfirmState {
   verb: string
@@ -42,10 +44,11 @@ export default function NeedsAttention({ items, onActionDone }: Props) {
   const { push } = useToast()
   const [confirm, setConfirm] = useState<ConfirmState | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
-  async function runAction(verb: string, target: string) {
+  async function runAction(verb: string, target: string, params?: Record<string, unknown>) {
     setBusyId(`${verb}:${target}`)
-    const result = await execute(verb, target)
+    const result = await execute(verb, target, params)
     push(result.result, result.ok)
     setBusyId(null)
     if (result.ok) onActionDone?.()
@@ -59,7 +62,20 @@ export default function NeedsAttention({ items, onActionDone }: Props) {
     if (!confirm) return
     const { verb, target } = confirm
     setConfirm(null)
-    await runAction(verb, target)
+    if (verb === 'pause') {
+      await runAction(verb, target, { confirmed: true })
+    } else {
+      await runAction(verb, target)
+    }
+  }
+
+  function toggleExpand(id: string) {
+    setExpanded(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   }
 
   return (
@@ -91,10 +107,12 @@ export default function NeedsAttention({ items, onActionDone }: Props) {
       ) : (
         <div className="space-y-2">
           {items.map((item, i) => {
-            // Only use explicit id field — never fall back to source (path-traversal risk)
             const itemId = item.id
-            const isBusy = itemId !== undefined && busyId === itemId
+            const isBusy = itemId !== undefined && (busyId?.endsWith(`:${itemId}`) ?? false)
             const showActions = ACTIONABLE_CATEGORIES.has(item.category) && !!itemId
+            const isProposal = item.category === 'owner_ask'
+            const isExpanded = itemId ? expanded.has(itemId) : false
+            const hasDetail = !!(item.detail || item.recommendation)
 
             return (
               <div
@@ -102,28 +120,71 @@ export default function NeedsAttention({ items, onActionDone }: Props) {
                 className={`border-l-2 pl-3 py-1.5 ${borderColor[item.severity] ?? 'border-slate-500'}`}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className={`text-sm ${severityColor[item.severity] ?? 'text-slate-300'}`}>
-                      {item.title}
-                    </p>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className={`text-sm ${severityColor[item.severity] ?? 'text-slate-300'}`}>
+                        {item.title}
+                      </p>
+                      {hasDetail && itemId && (
+                        <button
+                          onClick={() => toggleExpand(itemId)}
+                          className="font-mono text-[10px] text-slate-500 hover:text-slate-300"
+                        >
+                          {isExpanded ? '▲' : '▼'}
+                        </button>
+                      )}
+                    </div>
                     <p className="font-mono text-xs text-slate-500 mt-0.5">{item.source}</p>
+                    {isExpanded && (item.detail || item.recommendation) && (
+                      <div className="mt-2 space-y-1">
+                        {item.detail && (
+                          <p className="font-mono text-xs text-slate-400">{item.detail}</p>
+                        )}
+                        {item.recommendation && (
+                          <p className="font-mono text-xs text-cyan-400/70">
+                            ▶ {item.recommendation}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                   {showActions && (
                     <div className="flex gap-1.5 shrink-0">
-                      <button
-                        onClick={() => requestAction('approve', itemId, item.title)}
-                        disabled={isBusy}
-                        className="hud-btn px-2 py-0.5 text-xs text-green-400 border-green-500/40 hover:bg-green-500/10 disabled:opacity-40"
-                      >
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => requestAction('reject', itemId, item.title)}
-                        disabled={isBusy}
-                        className="hud-btn px-2 py-0.5 text-xs text-red-400 border-red-500/40 hover:bg-red-500/10 disabled:opacity-40"
-                      >
-                        Reject
-                      </button>
+                      {isProposal ? (
+                        <>
+                          <button
+                            onClick={() => itemId && runAction('approve', itemId)}
+                            disabled={isBusy}
+                            className="hud-btn px-2 py-0.5 text-xs text-green-400 border-green-500/40 hover:bg-green-500/10 disabled:opacity-40"
+                          >
+                            Applied
+                          </button>
+                          <button
+                            onClick={() => itemId && runAction('skip_proposal', itemId)}
+                            disabled={isBusy}
+                            className="hud-btn px-2 py-0.5 text-xs text-slate-400 border-slate-500/40 hover:bg-slate-500/10 disabled:opacity-40"
+                          >
+                            Skip
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => requestAction('approve', itemId!, item.title)}
+                            disabled={isBusy}
+                            className="hud-btn px-2 py-0.5 text-xs text-green-400 border-green-500/40 hover:bg-green-500/10 disabled:opacity-40"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => requestAction('reject', itemId!, item.title)}
+                            disabled={isBusy}
+                            className="hud-btn px-2 py-0.5 text-xs text-red-400 border-red-500/40 hover:bg-red-500/10 disabled:opacity-40"
+                          >
+                            Reject
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>

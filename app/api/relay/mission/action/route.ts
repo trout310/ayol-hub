@@ -4,7 +4,7 @@ import { cookies } from 'next/headers'
 const RELAY_URL = process.env.RELAY_URL ?? 'https://miniassts-mac-mini.taild32851.ts.net:8443'
 const RELAY_SECRET = process.env.HUB_RELAY_SECRET ?? ''
 
-const ALLOWED_VERBS = new Set(['pause', 'resume', 'wake', 'approve', 'reject'])
+const ALLOWED_VERBS = new Set(['pause', 'resume', 'wake', 'approve', 'reject', 'skip_proposal'])
 
 export async function POST(req: NextRequest) {
   if (!RELAY_SECRET) {

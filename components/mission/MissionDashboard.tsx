@@ -15,6 +15,8 @@ interface AttentionItem {
   title: string
   source: string
   id?: string
+  detail?: string
+  recommendation?: string
 }
 
 interface AgentRow {
