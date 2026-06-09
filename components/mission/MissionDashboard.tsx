@@ -6,6 +6,7 @@ import Fleet from './Fleet'
 import SystemHealth from './SystemHealth'
 import ProjectRoster from './ProjectRoster'
 import CommandOutbox from './CommandOutbox'
+import WeeklyRetro from './WeeklyRetro'
 import type { Project } from '@/lib/projects'
 
 interface AttentionItem {
@@ -161,6 +162,9 @@ export default function MissionDashboard() {
 
         {/* CommandOutbox — full width */}
         <CommandOutbox refreshTick={outboxTick} />
+
+        {/* WeeklyRetro — collapsible, full width */}
+        <WeeklyRetro />
 
         {/* ProjectRoster — full width */}
         <ProjectRoster projects={projects} />
