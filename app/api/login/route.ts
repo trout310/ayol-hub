@@ -42,6 +42,9 @@ export async function POST(req: NextRequest) {
   }
 
   const tok = await token()
+  // CSRF token is independent from the auth token — same lifetime, different value.
+  // Non-HttpOnly so JS can read it and echo as X-CSRF-Token on mutations.
+  const csrf = crypto.randomUUID().replace(/-/g, '')
   const res = NextResponse.json({ ok: true })
   res.cookies.set(COOKIE_NAME, tok, {
     httpOnly: true,
@@ -50,8 +53,7 @@ export async function POST(req: NextRequest) {
     path: '/',
     maxAge: 60 * 60 * 24 * 30, // 30 days
   })
-  // Non-HttpOnly CSRF token — JS reads it and echoes as X-CSRF-Token header on mutations.
-  res.cookies.set('hub_csrf', tok.slice(0, 16), {
+  res.cookies.set('hub_csrf', csrf, {
     httpOnly: false,
     secure: true,
     sameSite: 'lax',

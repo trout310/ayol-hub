@@ -41,7 +41,9 @@ export default function CommandOutbox({ refreshTick }: Props) {
       const res = await fetch('/api/relay/mission/audit', { cache: 'no-store' })
       if (!res.ok) return
       const data = await res.json()
-      setEntries((data.entries ?? []).slice(0, 20))
+      // entries are in file order (oldest first); take last 20 and reverse for newest-first display
+      const all: AuditEntry[] = data.entries ?? []
+      setEntries([...all].slice(-20).reverse())
     } catch {
       // silent — outbox is non-critical
     } finally {

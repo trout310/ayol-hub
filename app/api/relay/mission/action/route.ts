@@ -4,6 +4,8 @@ import { cookies } from 'next/headers'
 const RELAY_URL = process.env.RELAY_URL ?? 'https://miniassts-mac-mini.taild32851.ts.net:8443'
 const RELAY_SECRET = process.env.HUB_RELAY_SECRET ?? ''
 
+const ALLOWED_VERBS = new Set(['pause', 'resume', 'wake', 'approve', 'reject'])
+
 export async function POST(req: NextRequest) {
   if (!RELAY_SECRET) {
     return NextResponse.json({ error: 'Relay not configured' }, { status: 503 })
@@ -17,11 +19,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'CSRF mismatch' }, { status: 403 })
   }
 
-  let body: unknown
+  let body: { verb?: unknown; target?: unknown; params?: unknown }
   try {
     body = await req.json()
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+  }
+
+  // Allowlist verbs at the Next.js layer too (defence-in-depth)
+  const verb = typeof body.verb === 'string' ? body.verb : ''
+  if (!ALLOWED_VERBS.has(verb)) {
+    return NextResponse.json({ error: `Unknown verb: ${verb}` }, { status: 400 })
   }
 
   try {
@@ -32,6 +40,7 @@ export async function POST(req: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(10_000),
     })
     const data = await res.json()
     return NextResponse.json(data, { status: res.status })

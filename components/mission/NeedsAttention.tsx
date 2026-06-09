@@ -91,9 +91,10 @@ export default function NeedsAttention({ items, onActionDone }: Props) {
       ) : (
         <div className="space-y-2">
           {items.map((item, i) => {
-            const itemId = item.id ?? item.source
-            const isBusy = busyId !== null && busyId.endsWith(`:${itemId}`)
-            const showActions = ACTIONABLE_CATEGORIES.has(item.category) && itemId
+            // Only use explicit id field — never fall back to source (path-traversal risk)
+            const itemId = item.id
+            const isBusy = itemId !== undefined && busyId === itemId
+            const showActions = ACTIONABLE_CATEGORIES.has(item.category) && !!itemId
 
             return (
               <div

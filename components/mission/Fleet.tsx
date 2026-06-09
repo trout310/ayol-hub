@@ -39,9 +39,9 @@ export default function Fleet({ fleet, onActionDone }: Props) {
   const spendText =
     fleet.global_spend_usd !== null ? `$${fleet.global_spend_usd.toFixed(2)}` : 'unknown'
 
-  async function runAction(verb: string, target: string) {
+  async function runAction(verb: string, target: string, params?: Record<string, unknown>) {
     setBusyLabel(target)
-    const result = await execute(verb, target)
+    const result = await execute(verb, target, params)
     push(result.result, result.ok)
     setBusyLabel(null)
     if (result.ok) onActionDone?.()
@@ -55,7 +55,12 @@ export default function Fleet({ fleet, onActionDone }: Props) {
     if (!confirm) return
     const { verb, target } = confirm
     setConfirm(null)
-    await runAction(verb, target)
+    setBusyLabel(target)
+    // Send confirmed:true — required server-side for pause
+    const result = await execute(verb, target, { confirmed: true })
+    push(result.result, result.ok)
+    setBusyLabel(null)
+    if (result.ok) onActionDone?.()
   }
 
   return (
@@ -135,8 +140,8 @@ export default function Fleet({ fleet, onActionDone }: Props) {
                       )}
                       <button
                         onClick={() => runAction('wake', agent.label)}
-                        disabled={busy}
-                        title="Wake now"
+                        disabled={busy || agent.paused}
+                        title={agent.paused ? 'Resume before waking' : 'Wake now'}
                         className="hud-btn px-1.5 py-0.5 text-[10px] text-cyan-400 border-cyan-500/40 hover:bg-cyan-500/10 disabled:opacity-40"
                       >
                         ⏰
