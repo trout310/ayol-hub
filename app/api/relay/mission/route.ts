@@ -4,6 +4,9 @@ const RELAY_URL = process.env.RELAY_URL ?? 'https://miniassts-mac-mini.taild3285
 const RELAY_SECRET = process.env.HUB_RELAY_SECRET ?? ''
 
 export async function GET() {
+  if (!RELAY_SECRET) {
+    return NextResponse.json({ error: 'Relay not configured' }, { status: 503 })
+  }
   try {
     const res = await fetch(`${RELAY_URL}/mission/summary`, {
       headers: { Authorization: `Bearer ${RELAY_SECRET}` },
@@ -14,7 +17,7 @@ export async function GET() {
     const data = await res.json()
     return NextResponse.json(data)
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Unknown error'
+    const msg = e instanceof Error ? e.message : 'Relay unavailable'
     return NextResponse.json({ error: msg }, { status: 503 })
   }
 }

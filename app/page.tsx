@@ -70,7 +70,9 @@ export default function HomePage() {
         ) : attentionError ? (
           <div className="glass hud-corners p-5 flex items-center justify-center">
             <span className="hud-label text-red-400/80">
-              Relay unreachable — last data from {lastTimeStr}
+              {lastFetched
+                ? `Relay unreachable — last data from ${lastTimeStr}`
+                : 'Relay unreachable — could not load'}
             </span>
           </div>
         ) : (

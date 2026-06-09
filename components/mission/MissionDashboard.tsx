@@ -127,7 +127,12 @@ export default function MissionDashboard() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="hud-label">Mission Control</p>
-        <span className="font-mono text-xs text-slate-600">as of {asOf}</span>
+        <div className="flex items-center gap-2">
+          {error && (
+            <span className="font-mono text-xs text-yellow-400">⚠ relay unreachable — showing cached data</span>
+          )}
+          <span className="font-mono text-xs text-slate-600">as of {asOf}</span>
+        </div>
       </div>
 
       {/* NeedsAttention — full width */}
