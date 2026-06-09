@@ -1,9 +1,11 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
+import { ToastProvider } from '@/lib/toast'
 import NeedsAttention from './NeedsAttention'
 import Fleet from './Fleet'
 import SystemHealth from './SystemHealth'
 import ProjectRoster from './ProjectRoster'
+import CommandOutbox from './CommandOutbox'
 import type { Project } from '@/lib/projects'
 
 interface AttentionItem {
@@ -11,6 +13,7 @@ interface AttentionItem {
   category: string
   title: string
   source: string
+  id?: string
 }
 
 interface AgentRow {
@@ -71,6 +74,7 @@ export default function MissionDashboard() {
   const [loading, setLoading] = useState(true)
   const [lastFetched, setLastFetched] = useState<Date | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [outboxTick, setOutboxTick] = useState(0)
 
   const fetchAll = useCallback(async () => {
     try {
@@ -98,6 +102,12 @@ export default function MissionDashboard() {
     return () => clearInterval(interval)
   }, [fetchAll])
 
+  // After any action, re-fetch mission data + bump outbox
+  function handleActionDone() {
+    fetchAll()
+    setOutboxTick((t) => t + 1)
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-48 items-center justify-center">
@@ -107,13 +117,12 @@ export default function MissionDashboard() {
   }
 
   if (error && !mission) {
-    const timeStr = lastFetched
-      ? lastFetched.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      : '--:--'
     return (
       <div className="flex min-h-48 items-center justify-center">
         <span className="hud-label text-red-400/80">
-          Relay unreachable — last data from {timeStr}
+          {lastFetched
+            ? `Relay unreachable — last data from ${lastFetched.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+            : 'Relay unreachable — could not load data'}
         </span>
       </div>
     )
@@ -124,28 +133,38 @@ export default function MissionDashboard() {
   const asOf = formatTime(mission.generated_at)
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="hud-label">Mission Control</p>
-        <div className="flex items-center gap-2">
-          {error && (
-            <span className="font-mono text-xs text-yellow-400">⚠ relay unreachable — showing cached data</span>
-          )}
-          <span className="font-mono text-xs text-slate-600">as of {asOf}</span>
+    <ToastProvider>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="hud-label">Mission Control</p>
+          <div className="flex items-center gap-2">
+            {error && (
+              <span className="font-mono text-xs text-yellow-400">
+                ⚠ relay unreachable — showing cached data
+              </span>
+            )}
+            <span className="font-mono text-xs text-slate-600">as of {asOf}</span>
+          </div>
         </div>
+
+        {/* NeedsAttention — full width */}
+        <NeedsAttention
+          items={mission.needs_attention.items}
+          onActionDone={handleActionDone}
+        />
+
+        {/* Fleet + SystemHealth — side by side */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Fleet fleet={mission.fleet} onActionDone={handleActionDone} />
+          <SystemHealth health={mission.health} />
+        </div>
+
+        {/* CommandOutbox — full width */}
+        <CommandOutbox refreshTick={outboxTick} />
+
+        {/* ProjectRoster — full width */}
+        <ProjectRoster projects={projects} />
       </div>
-
-      {/* NeedsAttention — full width */}
-      <NeedsAttention items={mission.needs_attention.items} />
-
-      {/* Fleet + SystemHealth — side by side */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Fleet fleet={mission.fleet} />
-        <SystemHealth health={mission.health} />
-      </div>
-
-      {/* ProjectRoster — full width */}
-      <ProjectRoster projects={projects} />
-    </div>
+    </ToastProvider>
   )
 }

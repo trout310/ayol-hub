@@ -41,13 +41,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
   }
 
+  const tok = await token()
   const res = NextResponse.json({ ok: true })
-  res.cookies.set(COOKIE_NAME, await token(), {
+  res.cookies.set(COOKIE_NAME, tok, {
     httpOnly: true,
     secure: true,
     sameSite: 'lax',
     path: '/',
     maxAge: 60 * 60 * 24 * 30, // 30 days
+  })
+  // Non-HttpOnly CSRF token — JS reads it and echoes as X-CSRF-Token header on mutations.
+  res.cookies.set('hub_csrf', tok.slice(0, 16), {
+    httpOnly: false,
+    secure: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 30,
   })
   return res
 }
