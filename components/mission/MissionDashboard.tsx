@@ -202,7 +202,7 @@ export default function MissionDashboard() {
         </div>
 
         {/* Proposals — only renders when there are pending items */}
-        <ProposalViewer />
+        <ProposalViewer refreshTick={outboxTick} onActionDone={handleActionDone} />
       </div>
     </ToastProvider>
   )
