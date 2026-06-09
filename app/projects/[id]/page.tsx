@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import ChatInterface from '@/components/ChatInterface'
 import RemindersPanel from '@/components/RemindersPanel'
+import LearnEditor from '@/components/hub/LearnEditor'
 import { PROJECT_MAP } from '@/lib/projects'
 
 interface Props {
@@ -36,8 +37,9 @@ export default async function ProjectPage({ params }: Props) {
         <div className="flex-1 min-w-0">
           <ChatInterface projectId={id} />
         </div>
-        <div className="w-64 shrink-0">
+        <div className="w-64 shrink-0 flex flex-col gap-3 overflow-y-auto">
           <RemindersPanel projectId={id} />
+          <LearnEditor projectId={id} />
         </div>
       </div>
     </div>

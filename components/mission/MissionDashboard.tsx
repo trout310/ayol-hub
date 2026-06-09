@@ -8,6 +8,10 @@ import ProjectRoster from './ProjectRoster'
 import CommandOutbox from './CommandOutbox'
 import WeeklyRetro from './WeeklyRetro'
 import WorkingItems from './WorkingItems'
+import ActivityTimeline from './ActivityTimeline'
+import GoalsOverview from './GoalsOverview'
+import ResourceMonitor from './ResourceMonitor'
+import ProposalViewer from './ProposalViewer'
 import type { Project } from '@/lib/projects'
 
 interface AttentionItem {
@@ -187,6 +191,18 @@ export default function MissionDashboard() {
         {mission.working_items && mission.working_items.length > 0 && (
           <WorkingItems items={mission.working_items} />
         )}
+
+        {/* Phase 3 — Depth */}
+        <GoalsOverview />
+
+        {/* Goals + Resource side by side */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <ActivityTimeline />
+          <ResourceMonitor />
+        </div>
+
+        {/* Proposals — only renders when there are pending items */}
+        <ProposalViewer />
       </div>
     </ToastProvider>
   )
