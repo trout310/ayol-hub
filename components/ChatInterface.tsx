@@ -34,7 +34,18 @@ export default function ChatInterface({ projectId }: Props) {
     let history: Message[] = []
     try {
       const raw = localStorage.getItem(`chat:${projectId}`)
-      if (raw) history = JSON.parse(raw)
+      if (raw) {
+        const parsed: unknown = JSON.parse(raw)
+        if (Array.isArray(parsed)) {
+          history = parsed.filter(
+            (m): m is Message =>
+              typeof m === 'object' &&
+              m !== null &&
+              ((m as Message).role === 'user' || (m as Message).role === 'assistant') &&
+              typeof (m as Message).content === 'string'
+          )
+        }
+      }
     } catch {
       history = []
     }
@@ -99,10 +110,12 @@ export default function ChatInterface({ projectId }: Props) {
       const url = URL.createObjectURL(blob)
       const a = audioRef.current ?? new Audio()
       audioRef.current = a
+      // Revoke the previous blob URL before reassigning to avoid leaks.
+      if (a.src.startsWith('blob:')) URL.revokeObjectURL(a.src)
       a.muted = false
       a.src = url
       a.onended = () => URL.revokeObjectURL(url)
-      await a.play().catch(() => {})
+      await a.play().catch(() => URL.revokeObjectURL(url))
     } catch {
       /* TTS is best-effort */
     }
@@ -189,6 +202,16 @@ export default function ChatInterface({ projectId }: Props) {
       }
       persist(messagesRef.current)
       setStreaming(false)
+    }
+  }
+
+  const clearChat = () => {
+    messagesRef.current = []
+    setMessages([])
+    try {
+      localStorage.removeItem(`chat:${projectId}`)
+    } catch {
+      /* storage unavailable — non-fatal */
     }
   }
 
@@ -287,6 +310,17 @@ export default function ChatInterface({ projectId }: Props) {
           placeholder="Message JARVIS…"
           className="hud-input flex-1 rounded-lg px-4 py-2 text-sm text-white placeholder:text-slate-600"
         />
+        {messages.length > 0 && (
+          <button
+            type="button"
+            onClick={clearChat}
+            disabled={streaming}
+            title="Clear chat history"
+            className="font-mono text-[0.6rem] tracking-[0.15em] text-slate-600 uppercase transition-colors hover:text-cyan-400 disabled:opacity-40"
+          >
+            Clear
+          </button>
+        )}
         <button
           type="button"
           onClick={() => sendMessage(input)}
