@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+
 interface DaemonExit {
   label: string
   exit_code: number
@@ -40,12 +42,18 @@ export default function SystemHealth({ health }: Props) {
       ? 'text-yellow-400'
       : 'text-green-400'
 
+  const [collapsed, setCollapsed] = useState(false)
+
   return (
     <div className="glass hud-corners p-5">
       <div className="mb-4">
-        <span className="hud-label">System Health</span>
+        <button onClick={() => setCollapsed(c => !c)} className="flex items-center gap-2 hud-label hover:text-cyan-300">
+          <span className={`text-cyan-400/70 text-xs transition-transform ${collapsed ? "" : "rotate-90"}`}>▸</span>
+          System Health
+        </button>
       </div>
 
+      {!collapsed && (<>
       <div className="space-y-0">
         <Row label="Failures 24h">
           <span className={health.self_heal_failure_count_24h > 0 ? 'text-red-400' : 'text-green-400'}>
@@ -101,6 +109,7 @@ export default function SystemHealth({ health }: Props) {
           ))}
         </div>
       )}
+      </>)}
     </div>
   )
 }

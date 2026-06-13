@@ -35,6 +35,7 @@ export default function Fleet({ fleet, onActionDone }: Props) {
   const { push } = useToast()
   const [confirm, setConfirm] = useState<ConfirmState | null>(null)
   const [busyLabel, setBusyLabel] = useState<string | null>(null)
+  const [collapsed, setCollapsed] = useState(false)
 
   const spendText =
     fleet.global_spend_usd !== null ? `$${fleet.global_spend_usd.toFixed(2)}` : 'unknown'
@@ -76,12 +77,16 @@ export default function Fleet({ fleet, onActionDone }: Props) {
       )}
 
       <div className="mb-4 flex items-center justify-between">
-        <span className="hud-label">Fleet</span>
+        <button onClick={() => setCollapsed(c => !c)} className="flex items-center gap-2 hud-label hover:text-cyan-300">
+          <span className={`text-cyan-400/70 text-xs transition-transform ${collapsed ? "" : "rotate-90"}`}>▸</span>
+          Fleet
+        </button>
         <span className="font-mono text-xs text-slate-500">
           global spend today: {spendText}
         </span>
       </div>
 
+      {!collapsed && (
       <div className="space-y-4">
         {Object.entries(fleet.by_goal).map(([goal, agents]) => (
           <div key={goal}>
@@ -158,6 +163,7 @@ export default function Fleet({ fleet, onActionDone }: Props) {
           <p className="font-mono text-xs text-slate-600">No agents registered</p>
         )}
       </div>
+      )}
     </div>
   )
 }
