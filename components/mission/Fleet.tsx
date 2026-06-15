@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAction } from '@/lib/useAction'
 import { useToast } from '@/lib/toast'
 import ConfirmDialog from './ConfirmDialog'
@@ -35,7 +35,17 @@ export default function Fleet({ fleet, onActionDone }: Props) {
   const { push } = useToast()
   const [confirm, setConfirm] = useState<ConfirmState | null>(null)
   const [busyLabel, setBusyLabel] = useState<string | null>(null)
+  // Collapsed state persists across reloads (Aaron 2026-06-14: "be able to
+  // minimize it and expand it" — component-local state reset on every refresh).
   const [collapsed, setCollapsed] = useState(false)
+  useEffect(() => {
+    try { const v = localStorage.getItem('mc:fleet:collapsed'); if (v !== null) setCollapsed(v === '1') } catch {}
+  }, [])
+  const toggle = () => setCollapsed(c => {
+    const n = !c
+    try { localStorage.setItem('mc:fleet:collapsed', n ? '1' : '0') } catch {}
+    return n
+  })
 
   const spendText =
     fleet.global_spend_usd !== null ? `$${fleet.global_spend_usd.toFixed(2)}` : 'unknown'
@@ -77,9 +87,11 @@ export default function Fleet({ fleet, onActionDone }: Props) {
       )}
 
       <div className="mb-4 flex items-center justify-between">
-        <button onClick={() => setCollapsed(c => !c)} className="flex items-center gap-2 hud-label hover:text-cyan-300">
+        <button onClick={toggle} title={collapsed ? 'Expand' : 'Minimize'}
+          className="flex items-center gap-2 hud-label hover:text-cyan-300 cursor-pointer">
           <span className={`text-cyan-400/70 text-xs transition-transform ${collapsed ? "" : "rotate-90"}`}>▸</span>
           Fleet
+          <span className="ml-1 text-[10px] text-slate-600">{collapsed ? '(show)' : '(hide)'}</span>
         </button>
         <span className="font-mono text-xs text-slate-500">
           global spend today: {spendText}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface DaemonExit {
   label: string
@@ -42,14 +42,26 @@ export default function SystemHealth({ health }: Props) {
       ? 'text-yellow-400'
       : 'text-green-400'
 
+  // Collapsed state persists across reloads (Aaron 2026-06-14: "be able to
+  // minimize it and expand it" — component-local state reset on every refresh).
   const [collapsed, setCollapsed] = useState(false)
+  useEffect(() => {
+    try { const v = localStorage.getItem('mc:health:collapsed'); if (v !== null) setCollapsed(v === '1') } catch {}
+  }, [])
+  const toggle = () => setCollapsed(c => {
+    const n = !c
+    try { localStorage.setItem('mc:health:collapsed', n ? '1' : '0') } catch {}
+    return n
+  })
 
   return (
     <div className="glass hud-corners p-5">
       <div className="mb-4">
-        <button onClick={() => setCollapsed(c => !c)} className="flex items-center gap-2 hud-label hover:text-cyan-300">
+        <button onClick={toggle} title={collapsed ? 'Expand' : 'Minimize'}
+          className="flex items-center gap-2 hud-label hover:text-cyan-300 cursor-pointer">
           <span className={`text-cyan-400/70 text-xs transition-transform ${collapsed ? "" : "rotate-90"}`}>▸</span>
           System Health
+          <span className="ml-1 text-[10px] text-slate-600">{collapsed ? '(show)' : '(hide)'}</span>
         </button>
       </div>
 
