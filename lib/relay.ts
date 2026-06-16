@@ -1,5 +1,10 @@
 import type { Project } from './projects'
 
+function getCsrf(): string {
+  if (typeof document === 'undefined') return ''
+  return document.cookie.match(/(?:^|;\s*)hub_csrf=([^;]*)/)?.[1] ?? ''
+}
+
 export async function fetchProjects(): Promise<Project[]> {
   const res = await fetch('/api/relay/projects', { cache: 'no-store' })
   if (!res.ok) throw new Error(`Relay error: ${res.status}`)
@@ -14,7 +19,7 @@ export async function streamChat(
 ): Promise<string | null> {
   const res = await fetch(`/api/relay/${projectId}/chat`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-csrf-token': getCsrf() },
     body: JSON.stringify({ message, session_id: sessionId }),
   })
 
