@@ -57,6 +57,7 @@ interface HealthData {
   self_heal_failure_count_24h: number
   self_heal_failures_24h: unknown[]
   daemon_nonzero_exits: Array<{ label: string; exit_code: number }>
+  daemon_invariant_failures?: Array<{ label: string; detail: string }>
   pa_queue_depth: number
   disk_free_gb: number | null
   cost_trend_7d: Array<{ date: string; spend_usd: number }>

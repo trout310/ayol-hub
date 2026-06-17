@@ -16,6 +16,7 @@ interface Props {
   health: {
     self_heal_failure_count_24h: number
     daemon_nonzero_exits: DaemonExit[]
+    daemon_invariant_failures?: { label: string; detail: string }[]
     pa_queue_depth: number
     disk_free_gb: number | null
     cost_trend_7d: CostPoint[]
@@ -81,6 +82,20 @@ export default function SystemHealth({ health }: Props) {
               {health.daemon_nonzero_exits.map((d, i) => (
                 <div key={i} className="text-yellow-400">
                   {d.label} <span className="text-slate-600">[{d.exit_code}]</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Row>
+
+        <Row label="Hung daemons">
+          {(health.daemon_invariant_failures ?? []).length === 0 ? (
+            <span className="text-green-400">None</span>
+          ) : (
+            <div className="space-y-0.5">
+              {(health.daemon_invariant_failures ?? []).map((d, i) => (
+                <div key={i} className="text-red-400">
+                  {d.label} <span className="text-slate-600">[{d.detail}]</span>
                 </div>
               ))}
             </div>
