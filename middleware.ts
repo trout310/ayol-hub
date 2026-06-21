@@ -34,7 +34,26 @@ export async function middleware(req: NextRequest) {
   const expected = await expectedToken()
 
   if (configured && cookie && cookie === expected) {
-    return NextResponse.next()
+    const res = NextResponse.next()
+    // Self-heal CSRF for sessions that predate the CSRF cookie: a long-lived
+    // hub_auth (30-day) issued before CSRF shipped has no hub_csrf, so the
+    // mutating routes (chat/reminders/learnings — they require
+    // X-CSRF-Token === hub_csrf) 403 with a cryptic "CSRF mismatch" and no hint
+    // to re-login. Mint hub_csrf here when it's absent on an already-authenticated
+    // request so a plain page load fixes it (no re-login needed). Mirrors the
+    // options in app/api/login/route.ts exactly. Only set when missing — never
+    // overwrites a valid token, so there's no churn and no effect on healthy
+    // sessions.
+    if (!req.cookies.get('hub_csrf')?.value) {
+      res.cookies.set('hub_csrf', crypto.randomUUID().replace(/-/g, ''), {
+        httpOnly: false,
+        secure: true,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 30, // 30 days — same lifetime as hub_auth
+      })
+    }
+    return res
   }
 
   // Unauthenticated. API routes get a clean 401; pages get redirected to login.
