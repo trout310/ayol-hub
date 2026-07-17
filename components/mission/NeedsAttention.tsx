@@ -156,7 +156,7 @@ export default function NeedsAttention({ items, onActionDone }: Props) {
                             onClick={() => itemId && requestAction('approve', itemId, item.title)}
                             disabled={isBusy}
                             title="Records that you already hand-edited LEARNINGS.md. Does NOT make the edits."
-                            className="hud-btn px-2 py-0.5 text-xs text-green-400 border-green-500/40 hover:bg-green-500/10 disabled:opacity-40"
+                            className="rounded px-3 py-1 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 border border-emerald-300/50 shadow-sm disabled:opacity-40"
                           >
                             Mark applied
                           </button>
@@ -164,7 +164,7 @@ export default function NeedsAttention({ items, onActionDone }: Props) {
                             onClick={() => itemId && requestAction('skip_proposal', itemId, item.title)}
                             disabled={isBusy}
                             title="Defers this proposal. It will be re-proposed from current state on the next run."
-                            className="hud-btn px-2 py-0.5 text-xs text-slate-400 border-slate-500/40 hover:bg-slate-500/10 disabled:opacity-40"
+                            className="rounded px-3 py-1 text-xs font-semibold text-white bg-slate-600 hover:bg-slate-500 border border-slate-300/40 shadow-sm disabled:opacity-40"
                           >
                             Defer
                           </button>
@@ -174,14 +174,14 @@ export default function NeedsAttention({ items, onActionDone }: Props) {
                           <button
                             onClick={() => requestAction('approve', itemId!, item.title)}
                             disabled={isBusy}
-                            className="hud-btn px-2 py-0.5 text-xs text-green-400 border-green-500/40 hover:bg-green-500/10 disabled:opacity-40"
+                            className="rounded px-3 py-1 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 border border-emerald-300/50 shadow-sm disabled:opacity-40"
                           >
                             Approve
                           </button>
                           <button
                             onClick={() => requestAction('reject', itemId!, item.title)}
                             disabled={isBusy}
-                            className="hud-btn px-2 py-0.5 text-xs text-red-400 border-red-500/40 hover:bg-red-500/10 disabled:opacity-40"
+                            className="rounded px-3 py-1 text-xs font-semibold text-white bg-red-600 hover:bg-red-500 border border-red-300/50 shadow-sm disabled:opacity-40"
                           >
                             Reject
                           </button>
