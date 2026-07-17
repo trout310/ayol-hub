@@ -153,18 +153,20 @@ export default function NeedsAttention({ items, onActionDone }: Props) {
                       {isProposal ? (
                         <>
                           <button
-                            onClick={() => itemId && runAction('approve', itemId)}
+                            onClick={() => itemId && requestAction('approve', itemId, item.title)}
                             disabled={isBusy}
+                            title="Records that you already hand-edited LEARNINGS.md. Does NOT make the edits."
                             className="hud-btn px-2 py-0.5 text-xs text-green-400 border-green-500/40 hover:bg-green-500/10 disabled:opacity-40"
                           >
-                            Applied
+                            Mark applied
                           </button>
                           <button
-                            onClick={() => itemId && runAction('skip_proposal', itemId)}
+                            onClick={() => itemId && requestAction('skip_proposal', itemId, item.title)}
                             disabled={isBusy}
+                            title="Defers this proposal. It will be re-proposed from current state on the next run."
                             className="hud-btn px-2 py-0.5 text-xs text-slate-400 border-slate-500/40 hover:bg-slate-500/10 disabled:opacity-40"
                           >
-                            Skip
+                            Defer
                           </button>
                         </>
                       ) : (
