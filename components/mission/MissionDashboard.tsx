@@ -173,8 +173,10 @@ export default function MissionDashboard() {
           onActionDone={handleActionDone}
         />
 
-        {/* Fleet + SystemHealth — side by side */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {/* Fleet + SystemHealth — side by side. items-start so a collapsed box
+            shrinks to its header instead of stretching to match its expanded
+            neighbor (grid default align-items:stretch left a big empty box). */}
+        <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
           <Fleet fleet={mission.fleet} onActionDone={handleActionDone} />
           <SystemHealth health={mission.health} />
         </div>

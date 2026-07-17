@@ -1,6 +1,15 @@
 import { NextRequest } from 'next/server'
 import { cookies } from 'next/headers'
 
+// A JARVIS "task" runs an agentic tool-use loop that routinely takes longer than
+// Vercel's default 10s function limit — the function was being killed mid-stream,
+// so a plain question answered but a task went silent. 60s is the Hobby ceiling
+// (raise if this project moves to Pro). Streaming still flushes partial output as
+// it arrives, so anything under the ceiling shows progress instead of nothing.
+export const runtime = 'nodejs'
+export const maxDuration = 60
+export const dynamic = 'force-dynamic'
+
 const RELAY_URL = process.env.RELAY_URL ?? 'https://miniassts-mac-mini.taild32851.ts.net:8443'
 const RELAY_SECRET = process.env.HUB_RELAY_SECRET ?? ''
 const SAFE_PROJECT = /^[a-z][a-z0-9-]+$/
@@ -65,7 +74,14 @@ export async function POST(
     })
   }
 
+  // no-transform + X-Accel-Buffering:no tell intermediary proxies not to buffer
+  // the stream, so text deltas reach the browser as they arrive (not all at once
+  // at the end — which reads as a hang during a long task).
   return new Response(res.body, {
-    headers: { 'Content-Type': 'application/x-ndjson' },
+    headers: {
+      'Content-Type': 'application/x-ndjson',
+      'Cache-Control': 'no-cache, no-transform',
+      'X-Accel-Buffering': 'no',
+    },
   })
 }
