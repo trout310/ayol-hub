@@ -19,7 +19,7 @@ export default async function ProjectPage({ params }: Props) {
   }
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] flex-col gap-4">
+    <div className="flex min-h-[calc(100vh-8rem)] flex-col gap-4 lg:h-[calc(100vh-8rem)] lg:min-h-0">
       <div className="flex items-center gap-3">
         <Link
           href="/projects"
@@ -33,11 +33,11 @@ export default async function ProjectPage({ params }: Props) {
         </span>
         <h1 className="text-xl font-semibold text-white">{project.name}</h1>
       </div>
-      <div className="flex flex-1 gap-4 min-h-0">
-        <div className="flex-1 min-w-0">
+      <div className="flex flex-1 flex-col gap-4 min-h-0 lg:flex-row">
+        <div className="flex min-h-[60vh] min-w-0 flex-1 flex-col lg:min-h-0">
           <ChatInterface projectId={id} />
         </div>
-        <div className="w-64 shrink-0 flex flex-col gap-3 overflow-y-auto">
+        <div className="w-full shrink-0 flex flex-col gap-3 overflow-y-auto lg:w-64">
           <RemindersPanel projectId={id} />
           <LearnEditor projectId={id} />
         </div>

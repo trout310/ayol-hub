@@ -70,14 +70,14 @@ export default function CommandOutbox({ refreshTick }: Props) {
       ) : (
         <div className="space-y-1.5 max-h-60 overflow-y-auto">
           {entries.map((e, i) => (
-            <div key={i} className="flex items-start gap-2 text-xs font-mono">
+            <div key={i} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs font-mono">
               <span className="text-slate-600 shrink-0 w-20">{formatTs(e.ts)}</span>
               <span className="text-cyan-400 shrink-0 w-14">{e.verb}</span>
               <span className="text-slate-300 truncate flex-1 min-w-0" title={e.target}>
                 {e.target}
               </span>
               <span
-                className={`shrink-0 truncate max-w-[140px] ${isSuccess(e.result) ? 'text-green-400' : 'text-red-400'}`}
+                className={`w-full shrink-0 truncate sm:w-auto sm:max-w-[140px] ${isSuccess(e.result) ? 'text-green-400' : 'text-red-400'}`}
                 title={e.result}
               >
                 {e.result.length > 30 ? e.result.slice(0, 30) + '…' : e.result}

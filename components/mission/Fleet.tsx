@@ -111,12 +111,12 @@ export default function Fleet({ fleet, onActionDone }: Props) {
                 return (
                   <div
                     key={i}
-                    className="flex items-center gap-2 rounded-md px-2 py-1.5 bg-slate-900/40 border border-slate-800/50 text-sm"
+                    className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md px-2 py-1.5 bg-slate-900/40 border border-slate-800/50 text-sm"
                   >
-                    <span className="flex-1 truncate text-slate-200 min-w-0" title={agent.label}>
+                    <span className="w-full truncate text-slate-200 min-w-0 sm:w-auto sm:flex-1" title={agent.label}>
                       {agent.label}
                     </span>
-                    <span className="font-mono text-xs text-slate-500 shrink-0">{agent.role}</span>
+                    <span className="hidden font-mono text-xs text-slate-500 shrink-0 sm:inline">{agent.role}</span>
                     <span
                       className={`shrink-0 font-mono text-xs ${
                         agent.status === 'active' ? 'text-green-400' : 'text-yellow-400'

@@ -59,7 +59,7 @@ export default function ResourceMonitor() {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-wider text-slate-500 mb-2">Top CPU</p>
           <div className="space-y-1.5">

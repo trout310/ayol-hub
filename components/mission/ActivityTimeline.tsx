@@ -70,16 +70,16 @@ export default function ActivityTimeline() {
 
       <div className="space-y-1">
         {visible.map((ev, i) => (
-          <div key={i} className="flex gap-2 py-1 border-b border-white/5 last:border-0 items-start">
-            <span className="font-mono text-xs text-slate-500 shrink-0 w-24">{formatTs(ev.ts)}</span>
-            <span className="font-mono text-xs text-slate-400 shrink-0 w-28 truncate" title={ev.source}>
+          <div key={i} className="flex flex-wrap gap-x-2 gap-y-0.5 py-1 border-b border-white/5 last:border-0 items-baseline">
+            <span className="font-mono text-xs text-slate-500 shrink-0 w-16 sm:w-24">{formatTs(ev.ts)}</span>
+            <span className="font-mono text-xs text-slate-400 shrink-0 w-24 truncate sm:w-28" title={ev.source}>
               {shortSource(ev.source)}
             </span>
-            <span className={`font-mono text-xs shrink-0 w-24 ${OUTCOME_COLORS[ev.outcome] ?? 'text-slate-400'}`}>
+            <span className={`font-mono text-xs shrink-0 w-20 sm:w-24 ${OUTCOME_COLORS[ev.outcome] ?? 'text-slate-400'}`}>
               {ev.outcome}
             </span>
             {ev.action && (
-              <span className="font-mono text-xs text-slate-500 truncate" title={ev.action}>
+              <span className="w-full truncate font-mono text-xs text-slate-500 sm:w-auto sm:flex-1" title={ev.action}>
                 {ev.action}
               </span>
             )}
