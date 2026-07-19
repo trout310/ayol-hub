@@ -61,6 +61,7 @@ interface HealthData {
   pa_queue_depth: number
   disk_free_gb: number | null
   cost_trend_7d: Array<{ date: string; spend_usd: number }>
+  incidents?: Array<{ root: string; cascade: string[]; description?: string; severity: string; summary: string }>
   notes: string[]
   as_of: string
 }

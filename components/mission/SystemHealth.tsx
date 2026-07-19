@@ -12,6 +12,14 @@ interface CostPoint {
   spend_usd: number
 }
 
+interface Incident {
+  root: string
+  cascade: string[]
+  description?: string
+  severity: string
+  summary: string
+}
+
 interface Props {
   health: {
     self_heal_failure_count_24h: number
@@ -20,6 +28,7 @@ interface Props {
     pa_queue_depth: number
     disk_free_gb: number | null
     cost_trend_7d: CostPoint[]
+    incidents?: Incident[]
     notes: string[]
   }
 }
@@ -67,6 +76,30 @@ export default function SystemHealth({ health }: Props) {
       </div>
 
       {!collapsed && (<>
+      {/* Dependency-aware incidents (WS8): a down root collapses its down dependents
+          into ONE card. Only rendered when present — no clutter when healthy. */}
+      {(health.incidents ?? []).length > 0 && (
+        <div className="mb-4 space-y-2">
+          {(health.incidents ?? []).map((inc, i) => (
+            <div key={i} className="rounded border border-red-500/40 bg-red-500/5 p-3">
+              <div className="flex items-center gap-2 font-mono text-xs text-red-400">
+                <span className="text-red-500">◆</span>
+                <span className="font-semibold">{inc.root} DOWN</span>
+                <span className="text-slate-500">— {inc.cascade.length} downstream collapsed</span>
+              </div>
+              {inc.cascade.length > 0 && (
+                <div className="mt-1 pl-5 font-mono text-[11px] text-slate-400">
+                  cascade: {inc.cascade.join(', ')}
+                </div>
+              )}
+              {inc.description && (
+                <div className="mt-0.5 pl-5 font-mono text-[10px] italic text-slate-500">{inc.description}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="space-y-0">
         <Row label="Failures 24h">
           <span className={health.self_heal_failure_count_24h > 0 ? 'text-red-400' : 'text-green-400'}>
