@@ -14,16 +14,20 @@ import { NextRequest } from 'next/server'
 //      Mini — this route only forwards c+n+t.
 //   3. One-time + 24h: the gateway consumes the pending code on confirm.
 //
-// Flow: browser (cookie-authed) -> this route -> Tailscale funnel ->
-//       Mini hub-relay /ha/confirm-link (Bearer) -> gateway /confirm-link
-//       (X-Gateway-Key + HMAC). This is a GET (a tap on a texted link), so the
-//       CSRF-token check used by mutating POST routes does not apply; the cookie
-//       gate is the request's auth.
+// PREFETCH SAFETY (2026-08-06): the pending is one-time and is CONSUMED by the
+// gateway's /confirm-link. HTTP GET is "safe"/idempotent by spec: Safari and
+// iMessage prefetch and can duplicate a single tap into several GETs. If the
+// GET consumed the pending, the first (often invisible, prefetch) request would
+// approve+execute and every later duplicate — including the one whose response
+// the browser actually renders — would return 404 "expired", so Aaron sees
+// "Expired" even though the action ran. Fix: GET only RENDERS a confirm page
+// with an explicit Approve button; only the button's POST consumes. POST is
+// never prefetched, so a single deliberate action = a single consume.
 
 const RELAY_URL = process.env.RELAY_URL ?? 'https://miniassts-mac-mini.taild32851.ts.net:8443'
 const RELAY_SECRET = process.env.HUB_RELAY_SECRET ?? ''
 
-function page(icon: string, title: string, detail: string): Response {
+function page(icon: string, title: string, detail: string, bodyExtra = ''): Response {
   // Escape any gateway-provided text so it stays inert in the page.
   const esc = (s: string) =>
     s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -43,6 +47,10 @@ function page(icon: string, title: string, detail: string): Response {
   .icon { font-size: 44px; }
   h1 { font-size: 19px; margin: 12px 0 8px; }
   p { color: #b0b0b5; font-size: 15px; line-height: 1.45; margin: 0; }
+  button { margin-top: 20px; width: 100%; padding: 14px 18px; font-size: 17px;
+           font-weight: 600; color: #fff; background: #0a84ff; border: 0;
+           border-radius: 12px; cursor: pointer; -webkit-appearance: none; }
+  button:active { background: #0060df; }
 </style>
 </head>
 <body>
@@ -50,6 +58,7 @@ function page(icon: string, title: string, detail: string): Response {
     <div class="icon">${esc(icon)}</div>
     <h1>${esc(title)}</h1>
     <p>${esc(detail)}</p>
+    ${bodyExtra}
   </div>
 </body>
 </html>`
@@ -57,20 +66,53 @@ function page(icon: string, title: string, detail: string): Response {
   // approve/expired/invalid outcome.
   return new Response(html, {
     status: 200,
-    headers: { 'content-type': 'text/html; charset=utf-8' },
+    headers: {
+      'content-type': 'text/html; charset=utf-8',
+      // Belt-and-suspenders: never let a shared cache serve this page.
+      'cache-control': 'no-store',
+    },
   })
 }
 
+// GET = show the confirm page with an Approve button. It NEVER consumes the
+// pending — a prefetch or a duplicated tap just re-renders the same button.
 export async function GET(req: NextRequest) {
   if (!RELAY_SECRET) {
     return page('⚠️', 'Not configured', 'The approval relay is not configured.')
   }
-
   const code = req.nextUrl.searchParams.get('c') ?? ''
   const nonce = req.nextUrl.searchParams.get('n') ?? ''
   const token = req.nextUrl.searchParams.get('t') ?? ''
   if (!code || !nonce || !token) {
     return page('✗', 'Invalid link', 'This approval link is missing its code, nonce, or token.')
+  }
+  const esc = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+  // Hidden fields carry c/n/t forward; the POST (below) is what consumes.
+  const form = `<form method="POST" action="/ha/approve">
+      <input type="hidden" name="c" value="${esc(code)}">
+      <input type="hidden" name="n" value="${esc(nonce)}">
+      <input type="hidden" name="t" value="${esc(token)}">
+      <button type="submit">Approve</button>
+    </form>`
+  return page('🔐', 'Confirm Home Assistant action',
+    'Tap Approve to run the gated action. This link is single-use and expires in 24 hours.',
+    form)
+}
+
+// POST = the explicit Approve button. This is the ONLY place that consumes the
+// one-time pending. POST is never prefetched, so one tap = one consume.
+export async function POST(req: NextRequest) {
+  if (!RELAY_SECRET) {
+    return page('⚠️', 'Not configured', 'The approval relay is not configured.')
+  }
+  const fd = await req.formData()
+  const code = String(fd.get('c') ?? '')
+  const nonce = String(fd.get('n') ?? '')
+  const token = String(fd.get('t') ?? '')
+  if (!code || !nonce || !token) {
+    return page('✗', 'Invalid link', 'This approval request is missing its code, nonce, or token.')
   }
 
   let res: Response
