@@ -1,13 +1,9 @@
 import { NextRequest } from 'next/server'
 import { cookies } from 'next/headers'
 
-// Async job + poll (2026-08-08, SPEC-ayol-chat-async-poll): a JARVIS turn's cost
-// GROWS with turn count (claude --resume replays the transcript + tool loops), so
-// later turns crossed this function's 60s Hobby ceiling and were killed mid-stream
-// — the chat "went silent" after a few back-and-forths (3rd recurrence of this
-// symptom; streaming was the prior fix and could not clear the ceiling). Now this
-// route only STARTS the turn on the relay (sub-second) and returns a job_id; the
-// client polls ../chat/poll for buffered events. Turn duration is now unbounded.
+// Poll half of the async job+poll chat (see ../route.ts). Each call proxies one
+// cheap since-cursor read of the relay's buffered job events — always sub-second,
+// so the 60s function ceiling can never kill a long JARVIS turn again.
 export const runtime = 'nodejs'
 export const maxDuration = 30
 export const dynamic = 'force-dynamic'
@@ -15,12 +11,13 @@ export const dynamic = 'force-dynamic'
 const RELAY_URL = process.env.RELAY_URL ?? 'https://miniassts-mac-mini.taild32851.ts.net:8443'
 const RELAY_SECRET = process.env.HUB_RELAY_SECRET ?? ''
 const SAFE_PROJECT = /^[a-z][a-z0-9-]+$/
+const SAFE_JOB = /^[a-f0-9]{32}$/
 
 interface Params {
   projectId: string
 }
 
-export async function POST(
+export async function GET(
   req: NextRequest,
   { params }: { params: Promise<Params> }
 ) {
@@ -39,7 +36,9 @@ export async function POST(
     })
   }
 
-  // CSRF: X-CSRF-Token header must match hub_csrf cookie (mirrors sibling mutating routes)
+  // CSRF: mirrors the start route. A GET that proxies an authenticated upstream
+  // read keeps the same header check so the relay is never reachable from a bare
+  // cross-site request.
   const csrfHeader = req.headers.get('x-csrf-token') ?? ''
   const cookieStore = await cookies()
   const csrfCookie = cookieStore.get('hub_csrf')?.value ?? ''
@@ -50,29 +49,31 @@ export async function POST(
     })
   }
 
-  let body: unknown
-  try {
-    body = await req.json()
-  } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+  const jobId = req.nextUrl.searchParams.get('job_id') ?? ''
+  if (!SAFE_JOB.test(jobId)) {
+    return new Response(JSON.stringify({ error: 'Invalid job id' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     })
   }
+  // Codex review 2026-08-08: strict unsigned-int cursor (reject, don't coerce).
+  const cursorRaw = req.nextUrl.searchParams.get('cursor') ?? '0'
+  if (!/^\d{1,9}$/.test(cursorRaw)) {
+    return new Response(JSON.stringify({ error: 'Invalid cursor' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+  const cursor = Number.parseInt(cursorRaw, 10)
 
   // Codex review 2026-08-08: explicit timeout + guarded parse so a stalled or
   // non-JSON relay yields a clean 502/503 instead of an uncaught 500.
   try {
     const res = await fetch(
-      `${RELAY_URL}/projects/${encodeURIComponent(projectId)}/chat/start`,
+      `${RELAY_URL}/projects/${encodeURIComponent(projectId)}/chat/poll?job_id=${jobId}&cursor=${cursor}`,
       {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${RELAY_SECRET}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(15_000),
+        headers: { Authorization: `Bearer ${RELAY_SECRET}` },
+        signal: AbortSignal.timeout(10_000),
       }
     )
 
