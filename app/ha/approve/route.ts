@@ -24,6 +24,14 @@ import { NextRequest } from 'next/server'
 // with an explicit Approve button; only the button's POST consumes. POST is
 // never prefetched, so a single deliberate action = a single consume.
 
+// Slow gated actions (Z-Wave failed-node removal runs up to ~90s in the
+// gateway) previously outlived EVERY layer above them: Vercel's ~10s default
+// function cap, this page's 20s fetch abort, and the relay's 30s proxy — so a
+// slow success was GUARANTEED to render as an error while it completed
+// (2026-08-20, four successes read as failures). Budgets now nest:
+// gateway 90s > relay 55s > page fetch 50s < function 60s.
+export const maxDuration = 60
+
 const RELAY_URL = process.env.RELAY_URL ?? 'https://miniassts-mac-mini.taild32851.ts.net:8443'
 const RELAY_SECRET = process.env.HUB_RELAY_SECRET ?? ''
 
@@ -124,10 +132,13 @@ export async function POST(req: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ code, nonce, token }),
-      signal: AbortSignal.timeout(20_000),
+      signal: AbortSignal.timeout(50_000),
     })
   } catch {
-    return page('⚠️', 'Unavailable', 'Could not reach the gateway. Try the "approve <code>" reply instead.')
+    return page('⏳', 'Taking longer than expected',
+      'Your approval was sent and may still be executing. Do NOT tap again — ' +
+      're-open the link in a minute: it will say "Already approved" if it completed. ' +
+      'If it says the link is unknown instead, reply "approve <code>" to the text.')
   }
 
   let data: { summary?: string; detail?: string; status?: string } = {}
@@ -140,6 +151,17 @@ export async function POST(req: NextRequest) {
 
   if (res.ok) {
     return page('✅', 'Approved', summary ? `Executed: ${summary}` : 'The action has been executed.')
+  }
+  if (res.status === 409) {
+    // Gateway remembers completed approvals for 24h: a duplicate tap is a
+    // SUCCESS being re-viewed, and must never look like a failure.
+    return page('✅', 'Already approved',
+      summary || 'This was already approved and completed earlier — no action needed.')
+  }
+  if (res.status === 502 && summary.toLowerCase().includes('approved, but execution failed')) {
+    // The approval itself worked; the ACTION failed. Saying "Not approved"
+    // here would be false in the way that matters most.
+    return page('⚠️', 'Approved — but the action failed', summary)
   }
   if (res.status === 403) {
     return page('✗', 'Invalid', 'This approval link is invalid (bad token).')
