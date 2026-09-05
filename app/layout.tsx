@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter, JetBrains_Mono } from 'next/font/google'
 import Link from 'next/link'
 import JarvisLogo from '@/components/JarvisLogo'
+import { JarvisVoiceProvider } from '@/lib/JarvisVoice'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
@@ -56,7 +57,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </div>
         </nav>
-        <main className="mx-auto max-w-7xl px-4 py-10">{children}</main>
+        <main className="mx-auto max-w-7xl px-4 py-10">
+          <JarvisVoiceProvider>{children}</JarvisVoiceProvider>
+        </main>
       </body>
     </html>
   )

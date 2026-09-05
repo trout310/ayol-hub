@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { streamChat } from '@/lib/relay'
-import { useSpeechRecognition } from '@/lib/useSpeechRecognition'
+import { useJarvisVoice } from '@/lib/JarvisVoice'
 import JarvisLogo from './JarvisLogo'
 
 interface Message {
@@ -13,11 +13,6 @@ interface Props {
   projectId: string
 }
 
-// Tiny silent WAV used to "unlock" audio playback during a user gesture so the
-// later TTS reply can play without being blocked by the browser autoplay policy.
-const SILENT_WAV =
-  'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA='
-
 export default function ChatInterface({ projectId }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -26,7 +21,6 @@ export default function ChatInterface({ projectId }: Props) {
   const [sessionId, setSessionId] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
   const messagesRef = useRef<Message[]>([]) // mirror for synchronous reads
 
   // Load persisted history + session for this project on mount / project change.
@@ -77,49 +71,9 @@ export default function ChatInterface({ projectId }: Props) {
     }
   }
 
-  // Unlock audio during a user gesture so the later TTS reply isn't autoplay-blocked.
-  const primeAudio = () => {
-    try {
-      if (!audioRef.current) audioRef.current = new Audio()
-      const a = audioRef.current
-      a.src = SILENT_WAV
-      a.muted = true
-      a.play()
-        .then(() => {
-          a.pause()
-          a.currentTime = 0
-          a.muted = false
-        })
-        .catch(() => {})
-    } catch {
-      /* ignore */
-    }
-  }
-
-  const speak = async (text: string) => {
-    const clean = text.replace(/^⚠️\s*/, '').slice(0, 800).trim()
-    if (!clean) return
-    try {
-      const res = await fetch('/api/voice/synth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: clean }),
-      })
-      if (!res.ok) return
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = audioRef.current ?? new Audio()
-      audioRef.current = a
-      // Revoke the previous blob URL before reassigning to avoid leaks.
-      if (a.src.startsWith('blob:')) URL.revokeObjectURL(a.src)
-      a.muted = false
-      a.src = url
-      a.onended = () => URL.revokeObjectURL(url)
-      await a.play().catch(() => URL.revokeObjectURL(url))
-    } catch {
-      /* TTS is best-effort */
-    }
-  }
+  // Site-wide voice state (shared with the hero reticle and the mute button).
+  const voice = useJarvisVoice()
+  const { listening, muted, toggleListen, toggleMute } = voice
 
   const sendMessage = async (text: string, opts: { voice?: boolean } = {}) => {
     const msg = text.trim()
@@ -190,7 +144,7 @@ export default function ChatInterface({ projectId }: Props) {
       }
 
       if (opts.voice && assistantContent && !assistantContent.startsWith('⚠️')) {
-        void speak(assistantContent)
+        void voice.speak(assistantContent)
       }
     } catch (e) {
       assistantContent = `⚠️ ${e instanceof Error ? e.message : 'Unknown error'}`
@@ -215,10 +169,11 @@ export default function ChatInterface({ projectId }: Props) {
     }
   }
 
-  const { listening, start: startVoice } = useSpeechRecognition({
-    onResult: (text) => sendMessage(text, { voice: true }),
-    onStart: primeAudio,
-  })
+  const sendRef = useRef(sendMessage)
+  sendRef.current = sendMessage
+  useEffect(() => {
+    voice.register({ onResult: (text) => sendRef.current(text, { voice: true }) })
+  }, [voice])
 
   return (
     <div className="glass flex flex-1 flex-col overflow-hidden">
@@ -227,9 +182,9 @@ export default function ChatInterface({ projectId }: Props) {
         {messages.length === 0 && (
           <button
             type="button"
-            onClick={startVoice}
+            onClick={toggleListen}
             className="group mx-auto mt-10 flex flex-col items-center gap-3 text-center transition-opacity"
-            title="Tap to speak"
+            title={listening ? 'Tap to stop' : 'Tap to speak'}
           >
             <JarvisLogo
               size={72}
@@ -237,7 +192,7 @@ export default function ChatInterface({ projectId }: Props) {
               className="opacity-70 transition-opacity group-hover:opacity-100"
             />
             <p className="font-mono text-xs tracking-[0.25em] text-cyan-400/60 uppercase group-hover:text-cyan-300/80">
-              {listening ? 'Listening…' : 'How can I assist you?'}
+              {listening ? 'Listening…' : muted ? 'Muted' : 'How can I assist you?'}
             </p>
             {!listening && (
               <span className="font-mono text-[0.6rem] tracking-[0.2em] text-slate-600 uppercase">
@@ -288,8 +243,22 @@ export default function ChatInterface({ projectId }: Props) {
       <div className="flex items-center gap-2 border-t border-cyan-400/15 p-3">
         <button
           type="button"
-          onClick={startVoice}
-          title={listening ? 'Listening…' : 'Speak to JARVIS'}
+          onClick={toggleMute}
+          aria-pressed={muted}
+          title={muted ? 'Unmute JARVIS' : 'Mute JARVIS'}
+          className={`flex items-center justify-center rounded-lg border p-2 font-mono text-[0.6rem] tracking-[0.15em] uppercase transition-all ${
+            muted
+              ? 'border-amber-400/60 bg-amber-500/15 text-amber-200'
+              : 'border-cyan-400/20 bg-slate-900/70 text-cyan-300/70 hover:border-cyan-400/50'
+          }`}
+        >
+          {muted ? 'unmute' : 'mute'}
+        </button>
+        <button
+          type="button"
+          onClick={toggleListen}
+          aria-pressed={listening}
+          title={listening ? 'Stop listening' : 'Speak to JARVIS'}
           className={`flex items-center justify-center rounded-lg border p-2 transition-all ${
             listening
               ? 'border-red-500/60 bg-red-600/20 shadow-[0_0_16px_-4px_rgba(239,68,68,0.85)]'

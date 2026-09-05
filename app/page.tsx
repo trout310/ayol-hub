@@ -3,6 +3,8 @@ import { useEffect, useState, useCallback } from 'react'
 import JarvisLogo from '@/components/JarvisLogo'
 import ChatInterface from '@/components/ChatInterface'
 import NeedsAttention from '@/components/mission/NeedsAttention'
+import VoiceControls from '@/components/VoiceControls'
+import { useJarvisVoice } from '@/lib/JarvisVoice'
 
 interface AttentionItem {
   severity: string
@@ -16,6 +18,7 @@ export default function HomePage() {
   const [attentionLoaded, setAttentionLoaded] = useState(false)
   const [attentionError, setAttentionError] = useState(false)
   const [lastFetched, setLastFetched] = useState<Date | null>(null)
+  const { listening, muted, toggleListen } = useJarvisVoice()
 
   const fetchMission = useCallback(async () => {
     try {
@@ -44,16 +47,34 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col items-center gap-10">
-      {/* Hero */}
-      <div className="fade-up relative flex items-center justify-center mt-4">
-        <div className="absolute h-56 w-56 rounded-full bg-cyan-500/10 blur-3xl" aria-hidden />
-        <JarvisLogo size={140} />
-        <div className="absolute flex flex-col items-center">
-          <p className="hud-label mb-1">Online</p>
-          <span className="font-mono text-[0.65rem] tracking-[0.3em] text-cyan-300/80">
-            J.A.R.V.I.S.
-          </span>
-        </div>
+      {/* Hero — the reticle is the listen/stop switch, like the desktop HUD */}
+      <div className="fade-up flex flex-col items-center gap-4 mt-4">
+        <button
+          type="button"
+          onClick={toggleListen}
+          aria-pressed={listening}
+          title={listening ? 'Stop listening' : 'Listen'}
+          className={`relative flex items-center justify-center rounded-full transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 ${
+            muted ? 'opacity-50' : ''
+          }`}
+        >
+          <div
+            className={`pointer-events-none absolute h-56 w-56 rounded-full blur-3xl ${
+              listening ? 'bg-red-500/15' : 'bg-cyan-500/10'
+            }`}
+            aria-hidden
+          />
+          <JarvisLogo size={140} spinning={listening} />
+          <div className="absolute flex flex-col items-center pointer-events-none">
+            <p className={`hud-label mb-1 ${listening ? 'text-red-300' : muted ? 'text-amber-300/90' : ''}`}>
+              {listening ? 'Listening…' : muted ? 'Muted' : 'Online'}
+            </p>
+            <span className="font-mono text-[0.65rem] tracking-[0.3em] text-cyan-300/80">
+              J.A.R.V.I.S.
+            </span>
+          </div>
+        </button>
+        <VoiceControls />
       </div>
 
       {/* Chat */}
