@@ -4,6 +4,7 @@ import JarvisLogo from '@/components/JarvisLogo'
 import ChatInterface from '@/components/ChatInterface'
 import NeedsAttention from '@/components/mission/NeedsAttention'
 import VoiceControls from '@/components/VoiceControls'
+import StudioJarvisStrip from '@/components/StudioJarvisStrip'
 import { useJarvisVoice } from '@/lib/JarvisVoice'
 
 interface AttentionItem {
@@ -75,6 +76,8 @@ export default function HomePage() {
           </div>
         </button>
         <VoiceControls />
+        {/* Separate strip: this one drives the Studio's mic in the house, not this browser */}
+        <StudioJarvisStrip className="mt-2" />
       </div>
 
       {/* Chat */}
